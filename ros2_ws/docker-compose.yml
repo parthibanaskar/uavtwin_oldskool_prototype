@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  ros2_uav:
+    build: .
+    container_name: ros2_engine_health
+    network_mode: "host"
+    environment:
+      - ROS_DOMAIN_ID=0
+    tty: true

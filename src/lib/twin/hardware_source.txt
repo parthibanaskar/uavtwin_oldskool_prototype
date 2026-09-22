@@ -1,0 +1,58 @@
+
+export class HardwareTelemetrySource implements TelemetrySource {
+  readonly kind = "hardware" as const;
+  
+  private ws: WebSocket | null = null;
+
+  start(onSample: (s: Sample) => void) {
+    // Connect to the GCS API Gateway (Express)
+    this.ws = new WebSocket("ws://localhost:3001");
+    
+    this.ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        const sample: Sample = {
+          t: data.t,
+          wallClock: Date.now(),
+          profile: "cruise",
+          params: {
+            rpm: data.rpm,
+            vibration: data.vibration,
+            egt: 800, cht: 150, oilPressure: 4.5, oilTemp: 90, fuelFlow: 15, busVoltage: 24
+          },
+          redundant: { egt: 800, vibration: 2.5, oilPressure: 4.5 },
+          vibWave: [],
+          vibSampleRate: 1024,
+          gps: { lat: 28.6, lon: 77.2 },
+          inertial: { lat: 28.6, lon: 77.2 },
+          gpsSats: 12,
+          fuelPath: "primary",
+          activeFaults: [],
+          physics: {
+            rho: 1.225,
+            Cl: 0.5,
+            Cd: 0.03,
+            LD: 16.6,
+            BSFC: 0.28,
+            eta_th: 0.35,
+            fatigue_crack_m: data.physics.fatigue_crack_m,
+            rul_seconds: 3600,
+            gpsSpoofed: false
+          }
+        };
+        
+        onSample(sample);
+      } catch (e) {
+        console.error("Telemetry parse error", e);
+      }
+    };
+  }
+
+  stop() {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+  }
+}

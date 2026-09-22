@@ -1,0 +1,420 @@
+import { FLIGHT_PROFILES, PARAM_SPECS } from "./profiles";
+import type { FlightProfile, ParamKey, Sample } from "./types";
+import { getAtmosphere, getAeroDynamics, getThermodynamics, integrateParisLaw, estimateRUL, checkGPSconsistency } from "./physics";
+
+/**
+ * Ingestion boundary. The dashboard only ever reads from a TelemetrySource, so a
+ * real hardware feed (serial / CAN / MQTT bridge) can replace the simulator
+ * without touching any panel code.
+ */
+export interface TelemetrySource {
+  readonly kind: "simulated" | "hardware";
+  start(onSample: (sample: Sample) => void): void;
+  stop(): void;
+}
+
+const VIB_WINDOW = 256;
+const VIB_FS = 1024;
+const BASE_LAT = 28.6139;
+const BASE_LON = 77.209;
+
+function clamp(v: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, v));
+}
+
+function gauss() {
+  let u = 0;
+  let v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+export interface SimulatorOptions {
+  intervalMs?: number;
+}
+
+export class SimulatedTelemetrySource implements TelemetrySource {
+  readonly kind = "simulated" as const;
+
+  private timer: ReturnType<typeof setInterval> | undefined;
+  private onSample: ((s: Sample) => void) | undefined;
+  private t = 0;
+  private readonly intervalMs: number;
+  private profile: FlightProfile = "cruise";
+  private faults = new Map<string, number>(); // key -> seconds active
+  private fuelPath: "primary" | "secondary" = "primary";
+  private smoothed: Partial<Record<ParamKey, number>> = {};
+  private track = 0.9;
+  private gpsBias = { lat: 0, lon: 0 };
+  private inertial = { lat: BASE_LAT, lon: BASE_LON };
+  private vibPhase = 0;
+  private speedMultiplier = 1;
+  private fatigueCrackMeters = 0.001; // Initial flaw size of 1mm
+
+  constructor(options: SimulatorOptions = {}) {
+    this.intervalMs = options.intervalMs ?? 750;
+  }
+
+  start(onSample: (s: Sample) => void) {
+    this.onSample = onSample;
+    if (this.timer) return;
+    this.timer = setInterval(() => this.tick(), this.intervalMs);
+    this.tick();
+  }
+
+  stop() {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = undefined;
+  }
+
+  setProfile(profile: FlightProfile) {
+    this.profile = profile;
+  }
+
+  setSpeed(multiplier: number) {
+    this.speedMultiplier = multiplier;
+  }
+
+  setFuelPath(path: "primary" | "secondary") {
+    this.fuelPath = path;
+  }
+
+  getFuelPath() {
+    return this.fuelPath;
+  }
+
+  injectFault(key: string) {
+    if (!this.faults.has(key)) this.faults.set(key, 0);
+  }
+
+  clearFault(key: string) {
+    this.faults.delete(key);
+    if (key === "gpsSpoof") this.gpsBias = { lat: 0, lon: 0 };
+  }
+
+  clearAllFaults() {
+    this.faults.clear();
+    this.gpsBias = { lat: 0, lon: 0 };
+  }
+
+  activeFaults() {
+    return [...this.faults.keys()];
+  }
+
+  private progress(key: string, rampSeconds: number) {
+    const age = this.faults.get(key);
+    if (age === undefined) return 0;
+    return clamp(age / rampSeconds, 0, 1);
+  }
+
+  private tick() {
+    const dt = (this.intervalMs / 1000) * this.speedMultiplier;
+    this.t += dt;
+    for (const [key, age] of this.faults) this.faults.set(key, age + dt);
+
+    const spec = FLIGHT_PROFILES[this.profile];
+    const raw: Record<ParamKey, number> = { ...spec.nominal };
+
+    // ---- Fault physics -------------------------------------------------
+    const bearing = this.progress("bearingWear", 75);
+    const imbalance = this.progress("propImbalance", 25);
+    const oilStarve = this.progress("oilStarvation", 45);
+    const overtemp = this.progress("egtOvertemp", 40);
+    const pumpDegrade = this.progress("fuelPumpDegrade", 60);
+    const blockage = this.progress("fuelBlockage", 20);
+    const drift = this.progress("sensorDrift", 50);
+    const vibFail = this.progress("vibSensorFail", 5);
+    const busSag = this.progress("busSag", 35);
+    const spoof = this.progress("gpsSpoof", 12);
+    const icing = this.progress("icing", 40);
+
+    const fuelPathPenalty = this.fuelPath === "secondary" ? 0.04 : 0;
+    const effectiveStarve = this.fuelPath === "secondary" ? blockage * 0.25 : blockage;
+    const effectivePump = this.fuelPath === "secondary" ? pumpDegrade * 0.2 : pumpDegrade;
+
+    raw.vibration += bearing * 7.4 + imbalance * 5.8 + icing * 0.9;
+    raw.oilTemp += bearing * 22 + oilStarve * 34 + overtemp * 9;
+    raw.oilPressure -= oilStarve * 2.6 + bearing * 0.35;
+    raw.egt += overtemp * 190 + effectiveStarve * 70 + icing * 26 - effectivePump * 20;
+    raw.cht += overtemp * 62 + icing * 38 + bearing * 8;
+    raw.fuelFlow -= effectivePump * 7.2 + effectiveStarve * 9.4;
+    raw.fuelFlow -= raw.fuelFlow * fuelPathPenalty;
+    raw.rpm -= effectivePump * 620 + effectiveStarve * 1350 + icing * 520;
+    raw.rpm += imbalance * 40 * Math.sin(this.t / 3);
+    raw.busVoltage -= busSag * 5.1;
+
+    // ---- Smoothing + measurement noise ---------------------------------
+    const params = {} as Record<ParamKey, number>;
+    for (const key of Object.keys(raw) as ParamKey[]) {
+      const target = raw[key];
+      const prev = this.smoothed[key] ?? target;
+      const alpha = 1 - Math.exp(-dt / 1.6);
+      const next = prev + (target - prev) * alpha;
+      this.smoothed[key] = next;
+      const s = PARAM_SPECS[key];
+      params[key] = clamp(next + gauss() * spec.noise[key], s.min, s.max);
+    }
+
+    // ---- Redundant channel B -------------------------------------------
+    const redundant = {
+      egt: clamp(params.egt - drift * 74 + gauss() * 4, 200, 950),
+      vibration: clamp(params.vibration + gauss() * 0.14, 0, 22),
+      oilPressure: clamp(params.oilPressure + gauss() * 0.05, 0, 7),
+    };
+    if (vibFail > 0.3) params.vibration = 0.05 + Math.random() * 0.03; // dead channel A
+    if (drift > 0) params.egt = clamp(params.egt, 200, 950);
+
+    // ---- Vibration waveform for the FFT --------------------------------
+    const rotHz = Math.max(4, params.rpm / 60);
+    const bpfo = rotHz * 3.57;
+    const vibWave: number[] = [];
+    for (let i = 0; i < VIB_WINDOW; i++) {
+      const tt = this.vibPhase + i / VIB_FS;
+      const amp1 = 0.55 + imbalance * 4.6;
+      const ampB = 0.12 + bearing * 3.1;
+      vibWave.push(
+        amp1 * Math.sin(2 * Math.PI * rotHz * tt) +
+          0.3 * Math.sin(2 * Math.PI * rotHz * 2 * tt) +
+          ampB * Math.sin(2 * Math.PI * bpfo * tt) +
+          ampB * 0.5 * Math.sin(2 * Math.PI * bpfo * 2 * tt + 1.1) +
+          (0.18 + bearing * 0.5) * gauss(),
+      );
+    }
+    this.vibPhase += VIB_WINDOW / VIB_FS;
+
+    // ---- Navigation -----------------------------------------------------
+    const metresPerDeg = 111_320;
+    const speed = spec.airspeed;
+    this.track += dt * 0.02;
+    this.inertial = {
+      lat: this.inertial.lat + (Math.cos(this.track) * speed * dt) / metresPerDeg,
+      lon:
+        this.inertial.lon +
+        (Math.sin(this.track) * speed * dt) /
+          (metresPerDeg * Math.cos((this.inertial.lat * Math.PI) / 180)),
+    };
+    if (spoof > 0) {
+      this.gpsBias = {
+        lat: this.gpsBias.lat + dt * 0.00028 * spoof,
+        lon: this.gpsBias.lon + dt * 0.00021 * spoof,
+      };
+    }
+    const gps = {
+      lat: this.inertial.lat + this.gpsBias.lat + gauss() * 0.00002,
+      lon: this.inertial.lon + this.gpsBias.lon + gauss() * 0.00002,
+    };
+
+    // --- Physics Engine Integration ---
+    const altitude = this.profile === "cruise" ? 6000 : 1000;
+    const { rho } = getAtmosphere(altitude);
+    const aero = getAeroDynamics(rho, speed);
+    
+    // Convert kg/h to kg/s for the thermodynamics equation
+    const fuelFlowKgS = params.fuelFlow / 3600;
+    const airFlowKgS = fuelFlowKgS * 14.7; // simplified
+    const thermo = getThermodynamics(params.rpm, fuelFlowKgS, airFlowKgS);
+    
+    // Fatigue and RUL: deltaSigma is proxy for engine stress, increases with vibration and rpm
+    const stress_MPa = 40 + params.vibration * 2 + (params.rpm / 5000) * 10;
+    const cycles_this_tick = (params.rpm / 60) * dt;
+    this.fatigueCrackMeters = integrateParisLaw(this.fatigueCrackMeters, stress_MPa, cycles_this_tick);
+    const rul_seconds = estimateRUL(this.fatigueCrackMeters, stress_MPa, params.rpm);
+    
+    // Anti-spoofing check
+    const spoofCheck = checkGPSconsistency(gps.lat, gps.lon, this.inertial.lat, this.inertial.lon);
+
+    const sample: Sample = {
+      t: this.t,
+      wallClock: Date.now(),
+      profile: this.profile,
+      params,
+      redundant,
+      vibWave,
+      vibSampleRate: VIB_FS,
+      gps,
+      inertial: { ...this.inertial },
+      gpsSats: spoof > 0.4 ? 14 + Math.round(Math.random()) : 11 + Math.round(Math.random() * 2),
+      fuelPath: this.fuelPath,
+      activeFaults: this.activeFaults(),
+      physics: {
+        rho,
+        Cl: aero.Cl,
+        Cd: aero.Cd,
+        LD: aero.LD,
+        BSFC: thermo.BSFC,
+        eta_th: thermo.eta_th,
+        fatigue_crack_m: this.fatigueCrackMeters,
+        rul_seconds,
+        gpsSpoofed: spoofCheck.spoofed
+      }
+    };
+    this.onSample?.(sample);
+  }
+}
+
+export class HardwareTelemetrySource implements TelemetrySource {
+  readonly kind = "hardware" as const;
+  
+  private ws: WebSocket | null = null;
+  private onSampleCallback: ((s: Sample) => void) | null = null;
+  private currentActiveFaults: string[] = [];
+  private currentProfile: "idle" | "takeoff" | "cruise" | "loiter" | "descent" = "cruise";
+  private fuelPath: "primary" | "secondary" = "primary";
+
+  start(onSample: (s: Sample) => void) {
+    this.onSampleCallback = onSample;
+    // Connect to the GCS API Gateway (Express)
+    this.ws = new WebSocket("ws://localhost:3001");
+    
+    this.ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        // Sometimes React receives the echo of its own command from the broadcast server
+        if (data.type) return; 
+
+        if (data.activeFaults) {
+           this.currentActiveFaults = data.activeFaults;
+        }
+        
+        const f = data.features || {};
+
+        // Generate dynamic vibration waveform for the FFT Spectrum panel
+        const rotHz = data.rpm / 60.0;
+        const vibWave = new Float32Array(256);
+        const t_start = data.t;
+        const dt = 1.0 / 1024.0;
+        
+        let mag1x = 1.0; // Imbalance
+        let magBPFO = 0.05; // Bearing
+        
+        if (this.currentActiveFaults.includes("propImbalance")) mag1x = 8.0;
+        if (this.currentActiveFaults.includes("bearingWear")) magBPFO = 5.0;
+        
+        for (let i = 0; i < 256; i++) {
+          const time = t_start + i * dt;
+          let val = mag1x * Math.sin(2 * Math.PI * rotHz * time);
+          val += magBPFO * Math.sin(2 * Math.PI * rotHz * 3.57 * time);
+          val += (Math.random() - 0.5) * 0.5; // broadband noise
+          vibWave[i] = val;
+        }
+
+        const nom = FLIGHT_PROFILES[this.currentProfile].nominal;
+
+        const sample: Sample = {
+          t: data.t,
+          wallClock: Date.now(),
+          profile: this.currentProfile,
+          params: {
+            rpm: data.rpm ?? nom.rpm,
+            vibration: data.vibration ?? nom.vibration,
+            oilPressure: f.oil_press_kPa ? f.oil_press_kPa / 100 : nom.oilPressure,
+            oilTemp: f.oil_temp_C ?? nom.oilTemp,
+            egt: f.egt_C ?? nom.egt,
+            cht: f.cht_C ?? nom.cht,
+            fuelFlow: f.fuel_flow_kgph ?? nom.fuelFlow,
+            busVoltage: nom.busVoltage + ((f.alternator_ripple_mV || 50) - 50) / 1000.0,
+          },
+          redundant: { 
+            egt: (f.egt_C ?? nom.egt) + (this.currentActiveFaults.includes('sensorDrift') ? -60 : (Math.random() - 0.5)), 
+            vibration: (this.currentActiveFaults.includes('vibSensorFail') ? nom.vibration : data.vibration), 
+            oilPressure: (f.oil_press_kPa ? f.oil_press_kPa / 100 : nom.oilPressure) + (Math.random() - 0.5) * 0.1
+          },
+          vibWave: Array.from(vibWave),
+          vibSampleRate: 1024,
+          spectrum: data.spectrum,
+          gps: { 
+            lat: (data.lat ?? 28.6) + (this.currentActiveFaults.includes('gpsSpoof') ? 0.002 : 0), 
+            lon: (data.lon ?? 77.2) 
+          },
+          inertial: { lat: data.lat ?? 28.6, lon: data.lon ?? 77.2 },
+          gpsSats: this.currentActiveFaults.includes('gpsSpoof') ? 15 : 12, 
+          fuelPath: this.fuelPath,
+          activeFaults: this.currentActiveFaults,
+          physics: {
+            rho: data.physics?.rho ?? f.air_density_kgm3 ?? 1.225,
+            LD: data.physics?.ld_ratio ?? 16.6,
+            BSFC: data.physics?.bsfc ?? 280,
+            eta_th: data.physics?.eta_th ?? 0.35,
+            fatigue_crack_m: data.physics?.fatigue_crack_m ?? 0.001,
+            rul_seconds: data.physics?.rul_seconds ?? 3600,
+            hypo_rul_seconds: data.physics?.hypo_rul_seconds ?? 3600,
+            mission_time_seconds: data.physics?.mission_time_seconds ?? 0,
+            mission_distance_km: data.physics?.mission_distance_km ?? 0,
+            throttle_reduction: data.physics?.throttle_reduction ?? 1.0,
+            altitude_ft: data.physics?.altitude_ft ?? 2000,
+            gpsSpoofed: data.physics?.gpsSpoofed ?? false
+          }
+        };
+        
+        if (this.onSampleCallback) this.onSampleCallback(sample);
+      } catch (e) {
+        console.error("Telemetry parse error", e);
+      }
+    };
+  }
+
+  stop() {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+  }
+
+  injectFault(key: string) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "inject_fault", fault: key }));
+    }
+  }
+
+  clearFault(key: string) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "clear_fault", fault: key }));
+    }
+  }
+  
+  reduceThrottle() {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "reduce_throttle" }));
+    }
+  }
+  
+  setThrottle(throttle: number) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "set_throttle", throttle }));
+    }
+  }
+
+  divert(lat: number, lon: number) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "set_divert", lat, lon }));
+    }
+  }
+
+  calibrate() {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "calibrate" }));
+    }
+  }
+
+  clearAllFaults() {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "clear_all" }));
+    }
+  }
+
+  setProfile(p: any) {
+    this.currentProfile = p;
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "set_profile", profile: p }));
+    }
+  }
+
+  setFuelPath(path: "primary" | "secondary") {
+    this.fuelPath = path;
+    if (path === "secondary" && this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "clear_fault", fault: "fuelBlockage" }));
+    }
+  }
+}

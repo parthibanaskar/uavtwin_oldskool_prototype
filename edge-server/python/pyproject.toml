@@ -1,0 +1,21 @@
+[project]
+name = "uav-edge-server"
+version = "1.0.0"
+description = "UAV MALE Digital Twin - Edge AI Server (SIH 2026)"
+requires-python = ">=3.11"
+dependencies = [
+    "torch",
+    "numpy",
+    "pandas",
+    "websockets",
+    "scikit-image",
+    "opencv-python",
+    "ultralytics",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = ["ipython", "jupyter"]
+
+[tool.uv]
+python = "3.11"
