@@ -103,8 +103,15 @@ async def receive_commands(websocket, state):
         async for message in websocket:
             data = json.loads(message)
             if data.get("type") == "inject_fault":
-                if data["fault"] not in state["active_faults"]:
-                    state["active_faults"].append(data["fault"])
+                fault = data["fault"]
+                # DO NOT inject major physical faults during a landing divert, to prevent
+                # the UI telemetry from flatlining to zero (which users perceive as a UI crash)
+                if state.get("landing_mode") and fault in ["bearingWear", "oilStarvation", "fuelBlockage", "propImbalance", "icing"]:
+                    print(f"Ignored major fault '{fault}' during landing divert.")
+                    continue
+                    
+                if fault not in state["active_faults"]:
+                    state["active_faults"].append(fault)
                     if "fault_history" not in state:
                         state["fault_history"] = []
                     state["fault_history"].append(data["fault"])
