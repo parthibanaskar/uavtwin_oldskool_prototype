@@ -109,3 +109,4 @@ export function MasterAlarmBanner() {
     </div>
   );
 }
+

@@ -196,7 +196,7 @@ async def receive_commands(websocket, state):
                 state["t"] = 0 # Reset flight time
                 state["mission_distance_km"] = 300.0
                 state["throttle_reduction"] = 1.0
-                state["smoothed_da"] = 8.3e-8
+                state["smoothed_da"] = 2.77e-7
                 state["crashed"] = False
                 state["landed"] = False
                 state["engine_failed"] = False
@@ -219,7 +219,7 @@ async def telemetry_loop(websocket, state):
     state["mission_distance_km"] = 300.0
     state["throttle_reduction"] = 1.0
     state["throttle_pct"] = None # Will override profile if set
-    state["smoothed_da"] = 8.3e-8 # EMA for smooth RUL transitions
+    state["smoothed_da"] = 2.77e-7 # EMA for smooth RUL transitions
     
     # Real GPS Kinematics Initialization (New Delhi)
     state["lat"] = 28.6139
@@ -341,7 +341,7 @@ async def telemetry_loop(websocket, state):
             else:
                 target_alt = (dist_km / 0.5) * 200.0
             current_alt += (target_alt - current_alt) * 0.08
-        elif state.get("engine_failed"):
+        elif state.get("engine_failed") and not state.get("landed"):
             # Free-fall crash sequence (only when NOT in a landing divert)
             # Drop fast so the user isn't waiting 5 minutes for it to hit the ground
             current_alt -= 150.0
@@ -363,6 +363,10 @@ async def telemetry_loop(websocket, state):
             else:
                 target_alt = 0.0  # engine too weak to sustain flight
             current_alt += (target_alt - current_alt) * 0.04
+            if current_alt <= 1.0 and not state.get("landed"):
+                current_alt = 0.0
+                state["crashed"] = True
+                state["active_faults"].clear()
 
         
         alt_ft = max(0, current_alt)
@@ -491,7 +495,7 @@ async def telemetry_loop(websocket, state):
         # Calculate RUL based on true physical projection (time to reach 0.0025 meters)
         if da_dt <= 0:
             # If healing or stable, target a nominal baseline
-            target_da = 8.3e-8
+            target_da = 2.77e-7
             if not state.get("crashed") and crack_size < 0.0025:
                 state["engine_failed"] = False # Un-fail the engine so it climbs back up!
         else:
@@ -501,7 +505,7 @@ async def telemetry_loop(websocket, state):
         # Exponential Moving Average for ultra-smooth RUL transitions
         # When a fault is injected, RUL will slowly "drain" instead of jumping instantly
         # When a fault is fixed, RUL will slowly "climb" back to a recalculated lower baseline
-        state["smoothed_da"] = (state["smoothed_da"] * 0.99) + (target_da * 0.01)
+        state["smoothed_da"] = (state["smoothed_da"] * 0.995) + (target_da * 0.005)
             
         rul_seconds = max(0.0, (0.0025 - crack_size) / state["smoothed_da"])
         crack_mm = crack_size * 1000.0
@@ -600,3 +604,8 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+
+
+
