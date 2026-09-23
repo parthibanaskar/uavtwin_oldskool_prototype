@@ -264,8 +264,52 @@ export class HardwareTelemetrySource implements TelemetrySource {
 
   start(onSample: (s: Sample) => void) {
     this.onSampleCallback = onSample;
-    // Connect to the GCS API Gateway (Express)
-    this.ws = new WebSocket("ws://localhost:3001");
+    // Connect to the GCS API Gateway (Express).
+    // In production (Vercel), VITE_GCS_WS_URL should be set to a deployed backend.
+    // If it is not set, we fall back to localhost for local dev.
+    const wsUrl = (import.meta.env.VITE_GCS_WS_URL as string | undefined) ?? "ws://localhost:3001";
+    
+    let connectionAttempt: WebSocket;
+    try {
+      connectionAttempt = new WebSocket(wsUrl);
+    } catch {
+      // URL was completely invalid – jump straight to sim mode
+      this._startSimFallback(onSample);
+      return;
+    }
+    this.ws = connectionAttempt;
+
+    // ---- Fallback timer: if not connected within 3 s, use sim mode ----
+    const fallbackTimer = setTimeout(() => {
+      if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
+        console.warn("[VayuTwin] Backend unreachable – switching to simulation mode");
+        this.ws.close();
+        this.ws = null;
+        this._startSimFallback(onSample);
+      }
+    }, 3000);
+
+    this.ws.onopen = () => {
+      clearTimeout(fallbackTimer);
+      console.info("[VayuTwin] Connected to GCS backend at", wsUrl);
+    };
+
+    this.ws.onerror = () => {
+      clearTimeout(fallbackTimer);
+      console.warn("[VayuTwin] WS error – switching to simulation mode");
+      this.ws = null;
+      this._startSimFallback(onSample);
+    };
+
+    this.ws.onclose = (ev) => {
+      if (ev.code !== 1000) {
+        // Abnormal close (backend went away) – restart sim fallback
+        clearTimeout(fallbackTimer);
+        console.warn("[VayuTwin] WS closed unexpectedly – switching to simulation mode");
+        this.ws = null;
+        this._startSimFallback(onSample);
+      }
+    };
     
     this.ws.onmessage = (event) => {
       try {
@@ -355,66 +399,75 @@ export class HardwareTelemetrySource implements TelemetrySource {
     };
   }
 
+  private _simFallback: SimulatedTelemetrySource | null = null;
+
+  /** Start a local browser simulation when no backend is reachable */
+  private _startSimFallback(onSample: (s: Sample) => void) {
+    if (this._simFallback) return; // already running
+    this._simFallback = new SimulatedTelemetrySource({ intervalMs: 750 });
+    this._simFallback.start(onSample);
+  }
+
   stop() {
     if (this.ws) {
-      this.ws.close();
+      this.ws.close(1000); // clean close
       this.ws = null;
+    }
+    if (this._simFallback) {
+      this._simFallback.stop();
+      this._simFallback = null;
+    }
+  }
+
+  private _ws_send(msg: object) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(msg));
     }
   }
 
   injectFault(key: string) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "inject_fault", fault: key }));
-    }
+    this._ws_send({ type: "inject_fault", fault: key });
+    this._simFallback?.injectFault(key);
   }
 
   clearFault(key: string) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "clear_fault", fault: key }));
-    }
+    this._ws_send({ type: "clear_fault", fault: key });
+    this._simFallback?.clearFault(key);
   }
   
   reduceThrottle() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "reduce_throttle" }));
-    }
+    this._ws_send({ type: "reduce_throttle" });
   }
   
   setThrottle(throttle: number) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "set_throttle", throttle }));
-    }
+    this._ws_send({ type: "set_throttle", throttle });
   }
 
   divert(lat: number, lon: number) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "set_divert", lat, lon }));
-    }
+    this._ws_send({ type: "set_divert", lat, lon });
+    this._simFallback?.divert?.(lat, lon);
   }
 
   calibrate() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "calibrate" }));
-    }
+    this._ws_send({ type: "calibrate" });
   }
 
   clearAllFaults() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "clear_all" }));
-    }
+    this._ws_send({ type: "clear_all" });
+    this._simFallback?.clearAllFaults();
   }
 
   setProfile(p: any) {
     this.currentProfile = p;
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "set_profile", profile: p }));
-    }
+    this._ws_send({ type: "set_profile", profile: p });
+    this._simFallback?.setProfile(p);
   }
 
   setFuelPath(path: "primary" | "secondary") {
     this.fuelPath = path;
-    if (path === "secondary" && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "clear_fault", fault: "fuelBlockage" }));
+    if (path === "secondary") {
+      this._ws_send({ type: "clear_fault", fault: "fuelBlockage" });
+      this._simFallback?.clearFault("fuelBlockage");
     }
   }
 }
