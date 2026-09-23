@@ -284,6 +284,19 @@ function evaluateLandingAlerts(
         narrative: `DIVERT ACKNOWLEDGED: Flight computer has accepted the divert order.\n\n• Heading: Rerouting to FOB. Engine transitioning to descent power.\n• Status: Altitude hold at 2000 ft. Awaiting final approach corridor.`,
         resolutionNarrative: `APPROACH COMPLETE: UAV has entered the final approach corridor.`
       });
+      // Contextual auto-fixes for previous faults
+      if (d.sample.activeFaults.includes("bearingWear") || phys.bearing_permanently_damaged) {
+        push({
+          key: "autoFixOilPressure",
+          subsystem: "engine",
+          title: "Oil Scavenge Pump Activated (Auto-fixed)",
+          severity: "nominal",
+          confidence: 0.95,
+          hotspot: "engine",
+          contributions: [],
+          narrative: `Due to main bearing wear, oil pressure dropped during descent. AI has automatically engaged the auxiliary oil scavenge pump to maintain minimum safe lubrication until touchdown.`,
+        });
+      }
     } else if (dist <= 2.0 && dist > 0.5) {
       push({
         key: "landingGears",
@@ -299,6 +312,19 @@ function evaluateLandingAlerts(
         narrative: `FINAL APPROACH: UAV is on the 3-degree glide slope to the FOB.\n\n• Action: Landing gear deployed. Flaps extended to 30°.\n• Status: Airspeed bleeding off. Descending through ${phys.altitude_ft?.toFixed(0) ?? "—"} ft.`,
         resolutionNarrative: `GEAR DOWN: Gear locked and confirmed. Flare initiated.`
       });
+      // Contextual auto-fixes for previous faults
+      if (d.sample.activeFaults.includes("egtOvertemp") || phys.egt_C > 600) {
+        push({
+          key: "autoFixCooling",
+          subsystem: "engine",
+          title: "Cowl Flaps 100% (Auto-fixed)",
+          severity: "nominal",
+          confidence: 0.96,
+          hotspot: "hotSection",
+          contributions: [],
+          narrative: `Residual heat from the hot section overtemp caused cowl temperatures to spike. AI automatically opened cowl flaps to 100% to flush hot air and prevent composite airframe damage during low-speed glide.`,
+        });
+      }
     } else if (dist <= 0.5 && dist > 0.0) {
       push({
         key: "landingFlare",
@@ -313,6 +339,17 @@ function evaluateLandingAlerts(
         ],
         narrative: `FLARE SEQUENCE: UAV is in the final 500m. Throttle cut to idle.\n\n• Elevator pitched up to arrest descent rate.\n• Wheels loading down. Expect touchdown in seconds.`,
         resolutionNarrative: `TOUCHDOWN: Wheels on ground. Spoilers deployed.`
+      });
+      // Generic auto-fix for end of flight
+      push({
+        key: "autoFixHydraulics",
+        subsystem: "nav",
+        title: "Hydraulic Load Balanced (Auto-fixed)",
+        severity: "nominal",
+        confidence: 0.99,
+        hotspot: "avionics",
+        contributions: [],
+        narrative: `Gear deployment and flare caused a transient hydraulic pressure drop. AI auto-balanced the actuators to ensure all control surfaces remain responsive for touchdown.`,
       });
     }
   }

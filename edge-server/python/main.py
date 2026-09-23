@@ -436,6 +436,8 @@ async def telemetry_loop(websocket, state):
             }
             vibration = 0.0
             rpm = 0.0
+            bsfc = 0.0
+            eta_th = 0.0
             rul_seconds = 0.0
             hypo_rul_seconds = 0.0
             mission_time_seconds = 0.0
@@ -505,7 +507,7 @@ async def telemetry_loop(websocket, state):
         # Exponential Moving Average for ultra-smooth RUL transitions
         # When a fault is injected, RUL will slowly "drain" instead of jumping instantly
         # When a fault is fixed, RUL will slowly "climb" back to a recalculated lower baseline
-        state["smoothed_da"] = (state["smoothed_da"] * 0.995) + (target_da * 0.005)
+        state["smoothed_da"] = (state["smoothed_da"] * 0.999) + (target_da * 0.001)
             
         rul_seconds = max(0.0, (0.0025 - crack_size) / state["smoothed_da"])
         crack_mm = crack_size * 1000.0
