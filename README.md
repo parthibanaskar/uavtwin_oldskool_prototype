@@ -1,4 +1,10 @@
-# UAV MALE Digital Twin — SIH 2026
+# VayuTwin - Smart India Hackathon (SIH) 2026
+
+**Problem Statement ID:** SIH26054
+**Problem Statement Title:** AI-Enabled Real-Time Digital Twin System for Health Monitoring, Fault Prediction and Mission Reliability Enhancement of Aero Piston Engines used in MALE UAVs.
+**Team Name:** Old-Skool
+**Prototype Name:** VayuTwin
+
 **Real-time predictive maintenance digital twin for a UAV aero piston engine.**
 
 Architecture: React Dashboard ↔ Node.js GCS Gateway ↔ Python PINN/AI Edge Server ↔ C++/Pybind11 Sensor Sampler ↔ ROS 2 / PX4
@@ -128,5 +134,10 @@ This starts all 3 services and opens the dashboard at http://localhost:8080
 ---
 
 ## Team & Contributors
-- **Parthiban Askar** - Lead Developer, AI/Physics Architect, and Full-Stack Engineering
-- **VayuTwin Core Team** - Systems Integration & Testing
+- **Rimi Banerjee**
+- **Samiran Das**
+- **Parthiba Naskar**
+- **Kallol Das**
+- **Anik Kumar Saha**
+- **Aditi Sharma**
+
