@@ -10,18 +10,16 @@ class RulEstimator:
     def __init__(self):
         self.fatigue_crack = 0.001
         self.model = None
+        self.numpy_model = None
         self.feature_mean = 0.0
         self.feature_std = 1.0
         try:
-            # We try to load the trained PyTorch PINN model if it exists
             import torch
             import torch.optim as optim
             from train_physics_pinn import PhysicsPINN
-            # 13 features expected by the model
             self.model = PhysicsPINN(n_features=13)
             import os
             pt_path = os.path.join(os.path.dirname(__file__), "physics_pinn.pt")
-            # also look in root if not found in edge-server/python
             if not os.path.exists(pt_path): pt_path = "physics_pinn.pt"
             checkpoint = torch.load(pt_path, map_location="cpu", weights_only=False)
             self.model.load_state_dict(checkpoint["model_state"])
@@ -29,11 +27,29 @@ class RulEstimator:
             self.feature_mean = checkpoint["feature_mean"]
             self.feature_std = checkpoint["feature_std"]
             self.optimizer = optim.Adam(self.model.parameters(), lr=1e-5)
-            print("Successfully loaded physics_pinn.pt inference model!")
+            print("Successfully loaded physics_pinn.pt PyTorch model!")
         except Exception as e:
-            print(f"Running without AI. Could not load physics_pinn.pt: {e}")
+            print(f"PyTorch not available, falling back to pure Numpy PINN inference! ({e})")
             self.model = None
             self.optimizer = None
+            import numpy as np
+            import os
+            npz_path = os.path.join(os.path.dirname(__file__), "physics_pinn.npz")
+            if not os.path.exists(npz_path): npz_path = "physics_pinn.npz"
+            if os.path.exists(npz_path):
+                data = np.load(npz_path)
+                self.feature_mean = data['feature_mean']
+                self.feature_std = data['feature_std']
+                self.numpy_model = {
+                    'w0': data['backbone.0.weight'].T, 'b0': data['backbone.0.bias'],
+                    'w2': data['backbone.2.weight'].T, 'b2': data['backbone.2.bias'],
+                    'w4': data['backbone.4.weight'].T, 'b4': data['backbone.4.bias'],
+                    'wd': data['degradation_head.0.weight'].T, 'bd': data['degradation_head.0.bias'],
+                    'wc': data['crack_head.0.weight'].T, 'bc': data['crack_head.0.bias'],
+                }
+                print("Successfully loaded physics_pinn.npz Lightweight Model!")
+            else:
+                print("No Numpy model found either, AI disabled.")
             
     def online_train_step(self, features_dict, target_crack_growth):
         if self.model is None or self.optimizer is None: return 0.0
@@ -78,6 +94,19 @@ class RulEstimator:
                 D_pred, a_pred = self.model(torch.tensor(x_norm).unsqueeze(0))
             
             # The model predicts instantaneous severity, we use it to accelerate the crack growth
+            da *= (1.0 + max(0.0, D_pred.item() * 1.5))
+        elif self.numpy_model is not None and features_dict is not None:
+            import numpy as np
+            feature_names = ["altitude_ft", "air_density_kgm3", "rpm", "throttle_pct", "cht_C", "egt_C", "oil_press_kPa", "oil_temp_C", "fuel_flow_kgph", "bsfc_g_per_kWh", "vibration_rms_g", "ae_energy_20k_1M_band", "alternator_ripple_mV"]
+            x = [features_dict.get(n, 0.0) for n in feature_names]
+            x_norm = (np.array(x, dtype=np.float32) - self.feature_mean) / self.feature_std
+            
+            nm = self.numpy_model
+            h = np.tanh(x_norm @ nm['w0'] + nm['b0'])
+            h = np.tanh(h @ nm['w2'] + nm['b2'])
+            h = np.tanh(h @ nm['w4'] + nm['b4'])
+            D_pred = np.log1p(np.exp(h @ nm['wd'] + nm['bd'])) # softplus
+            
             da *= (1.0 + max(0.0, D_pred.item() * 1.5))
         elif features_dict is not None:
             # FALLBACK: If PyTorch model is missing, manually penalize RUL for all anomalies so the demo still works!
