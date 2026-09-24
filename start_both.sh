@@ -1,10 +1,9 @@
 #!/bin/bash
-# Force the port so Railway doesn't override it with a random one
+# Force the port so Railway doesn't override it
 export PORT=3001
 
 # Start GCS Node.js server in the background
 cd /app/gcs-server
-npm install
 npm start &
 GCS_PID=\$!
 
