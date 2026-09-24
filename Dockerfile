@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir numpy opencv-python-headless websockets asyncio
 RUN cd gcs-server && npm install
 
 # Make the start script executable
-RUN chmod +x start_both.sh
+RUN sed -i "s/\\r//" start_both.sh && chmod +x start_both.sh
 
 # Expose the GCS WebSocket port
 EXPOSE 3001
