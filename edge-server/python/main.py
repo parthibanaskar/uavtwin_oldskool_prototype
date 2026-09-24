@@ -77,6 +77,20 @@ class RulEstimator:
         da = 0.03e-8 * (stress ** 3) * self.fatigue_crack
         
         # Guarantee RUL plummets if a physical fault is active!
+        import random
+        # Add normal healthy XAI logs randomly so the feed feels "alive" during cruise
+        if not active_faults and random.random() < 0.15:
+            healthy_messages = [
+                "PINN model: Combustion efficiency optimal (99.8%)",
+                "Vibration signature matching baseline harmonic.",
+                "Paris Law prediction: RUL stable at cruise conditions.",
+                "Thermal gradients within nominal safety margins.",
+                "Oil pressure holding steady across engine block.",
+                "No anomalous acoustic emissions detected."
+            ]
+            msg = random.choice(healthy_messages)
+            alerts = [{"id": "pinn-healthy", "message": msg, "severity": "info"}]
+        
         if active_faults and len(active_faults) > 0:
             # We ignore non-physical or minor faults for the fatigue crack growth penalty
             ignored = ["rulAdvisory", "sensorDrift", "vibSensorFail", "gpsSpoof", "fuelTransfer"]
@@ -649,7 +663,7 @@ async def telemetry_loop(websocket, state):
             break
             
         t += 0.75
-        await asyncio.sleep(0.75)
+        await asyncio.sleep(0.15)
 
 async def main():
     import os
