@@ -212,7 +212,30 @@ async def receive_commands(websocket, state):
     except websockets.exceptions.ConnectionClosed:
         pass
 
+# Production Data Logging (SQLite)
+import sqlite3
+def init_db():
+    conn = sqlite3.connect("flight_data.db")
+    c = conn.cursor()
+    c.execute("""CREATE TABLE IF NOT EXISTS telemetry (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        mission_time REAL,
+        rpm REAL,
+        altitude_ft REAL,
+        vibration REAL,
+        egt_c REAL,
+        cht_c REAL,
+        crack_size_mm REAL,
+        rul_seconds REAL,
+        active_faults TEXT
+    )""")
+    conn.commit()
+    return conn
+
 async def telemetry_loop(websocket, state):
+    db_conn = init_db()
+    db_cursor = db_conn.cursor()
     rul_model = RulEstimator()
     state["rul_model"] = rul_model
     state["t"] = 0
@@ -580,6 +603,16 @@ async def telemetry_loop(websocket, state):
             "activeFaults": state["active_faults"]
         }
         
+        # Persist to SQLite DB (Production Logging)
+        try:
+            db_cursor.execute(
+                "INSERT INTO telemetry (mission_time, rpm, altitude_ft, vibration, egt_c, cht_c, crack_size_mm, rul_seconds, active_faults) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (t, rpm, alt_ft, vibration, features["egt_C"], features["cht_C"], crack_mm, rul_seconds, json.dumps(state["active_faults"]))
+            )
+            db_conn.commit()
+        except Exception as e:
+            print(f"DB Error: {e}")
+
         # Send to GCS Web App via API Gateway
         try:
             await websocket.send(json.dumps(payload))
@@ -590,7 +623,15 @@ async def telemetry_loop(websocket, state):
         await asyncio.sleep(0.75)
 
 async def main():
-    uri = "ws://localhost:3001"
+    import os
+    uri = os.environ.get("GCS_WS_URL", "ws://localhost:3001")
+    
+    # Apply Production Security Authentication
+    secret = os.environ.get("GCS_WS_SECRET")
+    if secret:
+        separator = "&" if "?" in uri else "?"
+        uri = f"{uri}{separator}token={secret}"
+        
     async with websockets.connect(uri) as websocket:
         print("Connected to GCS API Gateway...")
         state = {"active_faults": [], "profile": "cruise"}

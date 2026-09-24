@@ -23,7 +23,18 @@ const server = http.createServer(app);
 // WebSocket for Telemetry (React <-> ROS 2 / Python Edge)
 const wss = new WebSocketServer({ server });
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+  // Production Security Authentication
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const token = url.searchParams.get('token');
+  const secret = process.env.GCS_WS_SECRET;
+  
+  if (secret && token !== secret) {
+    console.warn("Unauthorized connection attempt blocked.");
+    ws.close(1008, "Unauthorized");
+    return;
+  }
+
   console.log('Client connected to GCS Telemetry Stream');
   
   // In a real system, we would subscribe to ROS 2 (via rclnodejs) or ZMQ from Python here.
