@@ -109,6 +109,15 @@ export class SimulatedTelemetrySource implements TelemetrySource {
     this.faults.clear();
     this.gpsBias = { lat: 0, lon: 0 };
     this.faultHistory.clear();
+    this.t = 0;
+    this.fatigueCrackMeters = 0.001;
+    this.history = [];
+    this.isDiverting = false;
+    this.divertStartT = 0;
+    this.engineFailT = undefined;
+    this.profile = "cruise";
+    const defaultGPS = FLIGHT_PROFILES.cruise.gps;
+    this.inertial = { lat: defaultGPS.lat, lon: defaultGPS.lon, vLat: 0, vLon: 0 };
   }
 
   activeFaults() {
