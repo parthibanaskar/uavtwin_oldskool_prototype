@@ -62,28 +62,8 @@ function TwinPanel() {
       <div className="absolute inset-0">
         <UavTwin />
       </div>
-      <div className="pointer-events-none absolute inset-x-2 bottom-2 flex flex-wrap items-end justify-between gap-2">
-        <div className="panel-surface pointer-events-auto max-w-[19rem] p-2">
-          {hotspot && value !== null ? (
-            <>
-              <p className="label-xs">{hotspot.subsystem} subsystem</p>
-              <p className="text-sm font-semibold">{hotspot.label}</p>
-              <p className={cn("font-mono text-lg leading-none", toneText[healthTone(value)])}>
-                {value}
-                <span className="text-xs text-muted-foreground">/100</span>
-              </p>
-              <p className="label-xs mt-1">
-                RUL {hotspotRul === null ? "stable" : `${hotspotRul.toFixed(0)} min`}
-              </p>
-            </>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Hotspots are colour-coded by live subsystem health. Alerts in the feed focus the
-              matching hotspot automatically.
-            </p>
-          )}
-        </div>
-      </div>
+
+
     </Panel>
   );
 }
