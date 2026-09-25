@@ -43,6 +43,12 @@ export function SafeLanding() {
         <PlaneLanding className="size-8 text-green-400 mb-2" />
         <h3 className="font-bold text-lg text-green-400 uppercase tracking-widest">Landed & Grounded</h3>
         <p className="text-xs text-muted-foreground mt-2">The UAV has successfully diverted and is safely grounded at the designated divert airbase.</p>
+          <button 
+            onClick={() => window.dispatchEvent(new Event('open-pfr'))}
+            className="mt-6 px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-green-500/30 transition-colors"
+          >
+            Open Post-Flight Review
+          </button>
       </Panel>
     );
   }
