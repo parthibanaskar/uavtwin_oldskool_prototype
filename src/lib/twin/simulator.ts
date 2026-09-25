@@ -86,6 +86,7 @@ export class SimulatedTelemetrySource implements TelemetrySource {
 
   private isDiverting = false;
   private divertStartT = 0;
+  private engineFailT = 0;
 
   divert(lat: number, lon: number) {
     this.isDiverting = true;
@@ -234,6 +235,30 @@ export class SimulatedTelemetrySource implements TelemetrySource {
     const spoofCheck = checkGPSconsistency(gps.lat, gps.lon, this.inertial.lat, this.inertial.lon);
 
     
+      
+      // Engine failure / Crash sequence if RUL is exhausted
+      let isCrashed = false;
+      let engineFailed = false;
+      if (rul_seconds <= 0 && !this.isDiverting) {
+          engineFailed = true;
+          this.profile = "idle";
+          params.rpm = 0;
+          params.vibration = 0;
+          params.fuelFlow = 0;
+      }
+      
+      let currentAlt = 2000.0;
+      if (this.isDiverting) {
+          currentAlt = Math.max(0, 2000.0 - ((this.t - this.divertStartT) * 120));
+      } else if (engineFailed) {
+          if (!this.engineFailT) this.engineFailT = this.t;
+          currentAlt = Math.max(0, 2000.0 - ((this.t - this.engineFailT) * 300));
+          if (currentAlt <= 0) {
+              isCrashed = true;
+              this.faults.clear();
+          }
+      }
+
       if (this.isDiverting && (this.t - this.divertStartT) * 0.046 >= 4.0) {
           this.faults.clear();
           this.profile = "idle";
@@ -264,13 +289,13 @@ export class SimulatedTelemetrySource implements TelemetrySource {
         fatigue_crack_m: this.fatigueCrackMeters,
         rul_seconds,
         gpsSpoofed: spoofCheck.spoofed,
-          altitude_ft: this.isDiverting ? Math.max(0, 2000.0 - ((this.t - this.divertStartT) * 120)) : 2000.0,
+          altitude_ft: currentAlt,
           mission_distance_km: this.isDiverting ? Math.max(0, 4.0 - ((this.t - this.divertStartT) * 0.046)) : Math.max(0, 300.0 - (this.t * 0.046)),
           mission_time_seconds: this.isDiverting ? Math.max(0, 4.0 - ((this.t - this.divertStartT) * 0.046)) / 0.046 : Math.max(0, 300.0 - (this.t * 0.046)) / 0.046,
           cumulative_damage_pct: (this.fatigueCrackMeters / 0.0025) * 100.0,
           landing_mode: this.isDiverting && (this.t - this.divertStartT) * 0.046 < 4.0,
           landed: this.isDiverting && (this.t - this.divertStartT) * 0.046 >= 4.0,
-          crashed: false
+          crashed: isCrashed
       }
     };
     this.onSample?.(sample);
