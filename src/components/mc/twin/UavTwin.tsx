@@ -121,7 +121,6 @@ export function UavTwin() {
   // Live physics & propeller rotation loop
   const [physicsStyles, setPhysicsStyles] = useState({});
 
-  // 2. We can still try to rotate the propeller inside the Sketchfab model
   useEffect(() => {
     let angle = 0;
     let timer: number;
@@ -130,9 +129,26 @@ export function UavTwin() {
       
       const state = stateRef.current;
       const rpm = state?.sample.params.rpm ?? 0;
+      const vib = state?.trustedVibration ?? 0;
+      const t = performance.now() / 1000;
 
-      if (!apiRef.current || !propIdRef.current) return;
+      // 1. CSS Physics for the whole iframe (banking and shaking)
+      // We scale to 1.05 so that when the iframe shifts or rotates, we don't see black edges
+      const bank = Math.sin(t * 0.5) * 1.5; // Gentle roll
+      const pitch = Math.cos(t * 0.3) * 0.5; // Gentle pitch
       
+      // High vibration = screen shake
+      const shakeAmt = Math.max(0, vib - 20) * 0.08;
+      const shakeX = (Math.random() - 0.5) * shakeAmt;
+      const shakeY = (Math.random() - 0.5) * shakeAmt;
+
+      setPhysicsStyles({
+        transform: `scale(1.05) translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`,
+        transition: "transform 0.05s ease-out",
+      });
+
+      // 2. Rotate the propeller inside the Sketchfab model
+      if (!apiRef.current || !propIdRef.current) return;
       angle += (rpm / 60) * 0.25;
       apiRef.current.rotate(propIdRef.current, [angle, 0, 0, 1], { duration: 0 });
     };
@@ -141,15 +157,16 @@ export function UavTwin() {
   }, []);
 
   return (
-    <div className="relative w-full h-full bg-[#101720]">
-      {/* ── Sketchfab iframe (unclipped) ── */}
+    <div className="relative w-full h-full bg-[#101720] overflow-hidden" style={{ perspective: "1000px" }}>
+      {/* ── Sketchfab iframe (Scaled slightly to allow shaking without black bars) ── */}
       <iframe
         ref={iframeRef}
         title="MQ-1C Gray Eagle"
         src=""
         allow="autoplay; fullscreen; xr-spatial-tracking"
         allowFullScreen
-        className="absolute inset-0 w-full h-full border-0"
+        className="absolute inset-0 w-full h-full border-0 origin-center"
+        style={physicsStyles}
       />
 
       {/* ── Loading Overlay ── */}
