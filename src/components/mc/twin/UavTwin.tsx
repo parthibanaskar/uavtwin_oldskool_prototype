@@ -36,16 +36,29 @@ export function UavTwin() {
   }, []);
 
   return (
-    <div className="relative w-full h-full bg-[#101720]">
-      {/* ── Clean Sketchfab iframe — no chrome ── */}
+    <div className="relative w-full h-full bg-[#101720] overflow-hidden">
+      {/* ── Sketchfab iframe ── */}
       <iframe
         title="MQ-1C Gray Eagle Digital Twin"
         src={EMBED_SRC}
         allow="autoplay; fullscreen; xr-spatial-tracking"
         allowFullScreen
-        className="w-full h-full border-0"
-        style={{ display: "block" }}
+        className="absolute border-0"
+        style={{
+          // Pull the iframe up/down so the Sketchfab chrome gets hidden behind our masks
+          top: "-72px",
+          left: 0,
+          width: "100%",
+          height: "calc(100% + 72px + 52px)",
+        }}
       />
+
+      {/* ── Top mask — covers "MQ-1C … by Studio Lab" bar ── */}
+      <div className="absolute top-0 left-0 right-0 h-[72px] bg-[#101720] z-10 pointer-events-none" />
+
+      {/* ── Bottom mask — covers HD / gear / VR toolbar ── */}
+      <div className="absolute bottom-0 left-0 right-0 h-[52px] bg-[#101720] z-10 pointer-events-none" />
+
 
       {/* ── XAI health badge overlay ── */}
       {ready && (
