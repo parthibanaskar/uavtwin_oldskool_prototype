@@ -123,7 +123,14 @@ export class SimulatedTelemetrySource implements TelemetrySource {
 
   private tick() {
     const dt = (this.intervalMs / 1000) * this.speedMultiplier;
-    this.t += dt;
+    const isLandedLoc = this.isDiverting && (this.t - this.divertStartT) * 0.046 >= 4.0;
+      let isCrashedLoc = false;
+      if (this.engineFailT) {
+          if (Math.max(0, 2000.0 - ((this.t - this.engineFailT) * 300)) <= 0) isCrashedLoc = true;
+      }
+      if (!isLandedLoc && !isCrashedLoc) {
+          this.t += dt;
+      }
     for (const [key, age] of this.faults) this.faults.set(key, age + dt);
 
     const spec = FLIGHT_PROFILES[this.profile];
