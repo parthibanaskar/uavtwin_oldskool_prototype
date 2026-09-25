@@ -131,7 +131,9 @@ export class SimulatedTelemetrySource implements TelemetrySource {
       if (!isLandedLoc && !isCrashedLoc) {
           this.t += dt;
       }
-    for (const [key, age] of this.faults) this.faults.set(key, age + dt);
+    for (const k of Array.from(this.faults.keys())) {
+        this.faults.set(k, (this.faults.get(k) || 0) + dt);
+      }
 
     const spec = FLIGHT_PROFILES[this.profile];
     const raw: Record<ParamKey, number> = { ...spec.nominal };
@@ -242,12 +244,14 @@ export class SimulatedTelemetrySource implements TelemetrySource {
     let rul_seconds = estimateRUL(this.fatigueCrackMeters, stress_MPa, params.rpm);
       // Artificially crush RUL instantly if a critical fault is injected and let it tick down to 0
       if (this.faults.size > 0 && !this.isDiverting) {
-          let maxAge = 0;
-          for (const age of this.faults.values()) {
-              if (age > maxAge) maxAge = age;
-          }
-          rul_seconds = Math.max(0, Math.min(rul_seconds, 65) - (maxAge * 3)); // Drop 3x faster so it crashes in ~20 seconds!
-      }
+            let maxAge = 0;
+            for (const k of Array.from(this.faults.keys())) {
+                const a = this.faults.get(k) || 0;
+                if (a > maxAge) maxAge = a;
+            }
+            rul_seconds = 65 - (maxAge * 3);
+            if (rul_seconds < 0) rul_seconds = 0;
+        }
     
     // Anti-spoofing check
     const spoofCheck = checkGPSconsistency(gps.lat, gps.lon, this.inertial.lat, this.inertial.lon);
