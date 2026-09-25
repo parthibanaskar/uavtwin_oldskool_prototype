@@ -46,7 +46,12 @@ export function UavTwin() {
   const idxToId = useRef<Record<number, string>>({});
   
   const health = displayed?.health;
-  const liveRpm = displayed?.sample.params.rpm ?? 0;
+  const stateRef = useRef(displayed);
+
+  // Keep stateRef in sync with React context
+  useEffect(() => {
+    stateRef.current = displayed;
+  }, [displayed]);
 
   // Show badges early
   useEffect(() => {
@@ -84,7 +89,8 @@ export function UavTwin() {
           api.getSceneGraph((err, result) => {
             if (err) return;
             const findProp = (node: any) => {
-              if (node.name && node.name.toLowerCase().includes("propeller")) {
+              const name = (node.name || "").toLowerCase();
+              if (name.includes("prop") || name.includes("rotor") || name.includes("blade") || name.includes("engine")) {
                 propIdRef.current = node.instanceID;
               }
               if (node.children) node.children.forEach(findProp);
@@ -112,28 +118,52 @@ export function UavTwin() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Live propeller rotation loop
+  // Live physics & propeller rotation loop
+  const [physicsStyles, setPhysicsStyles] = useState({});
+
   useEffect(() => {
     let angle = 0;
     let timer: number;
     const tick = () => {
       timer = requestAnimationFrame(tick);
+
+      // 1. Compute CSS shaking and banking for the entire iframe
+      const state = stateRef.current;
+      const rpm = state?.sample.params.rpm ?? 0;
+      const vib = state?.trustedVibration ?? 0;
+      const t = performance.now() / 1000;
+
+      // Simulated banking based on some noise or telemetry
+      const bank = Math.sin(t * 0.5) * 2; // gentle roll
+      const pitch = Math.cos(t * 0.3) * 1; // gentle pitch
+
+      // High vibration = screen shake
+      const shakeAmt = Math.max(0, vib - 20) * 0.1;
+      const shakeX = (Math.random() - 0.5) * shakeAmt;
+      const shakeY = (Math.random() - 0.5) * shakeAmt;
+
+      setPhysicsStyles({
+        transform: `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`,
+        transition: "transform 0.05s ease-out",
+      });
+
+      // 2. Rotate the propeller inside the Sketchfab model
       if (!apiRef.current || !propIdRef.current) return;
       
-      // Calculate rotation based on live RPM (simulate fast spin)
-      angle += (liveRpm / 60) * 0.15;
+      // Calculate rotation based on live RPM
+      angle += (rpm / 60) * 0.25;
       
-      // The propeller in this model is likely on the Z or Y axis
-      // Sketchfab rotate takes [angle_rad, x, y, z]
-      apiRef.current.rotate(propIdRef.current, [angle, 0, 1, 0], { duration: 0 });
+      // Rotate around Z axis (forward/backward) which is standard for pusher props
+      // If it doesn't spin the right way, it means the node's local axis is different, but Z is most common.
+      apiRef.current.rotate(propIdRef.current, [angle, 0, 0, 1], { duration: 0 });
     };
     timer = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(timer);
-  }, [liveRpm]);
+  }, []);
 
   return (
-    <div className="relative w-full h-full bg-[#101720] overflow-hidden">
-      {/* ── Sketchfab iframe (shifted up to hide chrome behind masks) ── */}
+    <div className="relative w-full h-full bg-[#101720] overflow-hidden" style={{ perspective: "1000px" }}>
+      {/* ── Sketchfab iframe (shifted up to hide chrome behind masks + live CSS physics) ── */}
       <iframe
         ref={iframeRef}
         title="MQ-1C Gray Eagle"
@@ -141,8 +171,12 @@ export function UavTwin() {
         allow="autoplay; fullscreen; xr-spatial-tracking"
         allowFullScreen
         className="absolute border-0"
-        style={{ top: "-72px", left: 0, width: "100%", height: "calc(100% + 72px + 52px)" }}
+        style={{
+          top: "-72px", left: "-5%", width: "110%", height: "calc(100% + 72px + 52px)",
+          ...physicsStyles
+        }}
       />
+
 
       {/* ── Chrome Masks ── */}
       <div className="absolute top-0 left-0 right-0 h-[72px] bg-[#101720] z-10 pointer-events-none" />
