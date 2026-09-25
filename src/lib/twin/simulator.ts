@@ -280,7 +280,7 @@ export class SimulatedTelemetrySource implements TelemetrySource {
       
       let currentAlt = 2000.0;
       if (this.isDiverting) {
-          currentAlt = Math.max(0, 2000.0 - ((this.t - this.divertStartT) * 120));
+          currentAlt = Math.max(0, 2000.0 - ((this.t - this.divertStartT) * 23.0));
       } else if (engineFailed) {
           if (!this.engineFailT) this.engineFailT = this.t;
           currentAlt = Math.max(0, 2000.0 - ((this.t - this.engineFailT) * 300));
