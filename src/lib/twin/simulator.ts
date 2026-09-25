@@ -239,7 +239,11 @@ export class SimulatedTelemetrySource implements TelemetrySource {
     const stress_MPa = 40 + params.vibration * 2 + (params.rpm / 5000) * 10;
     const cycles_this_tick = (params.rpm / 60) * dt;
     this.fatigueCrackMeters = integrateParisLaw(this.fatigueCrackMeters, stress_MPa, cycles_this_tick);
-    const rul_seconds = estimateRUL(this.fatigueCrackMeters, stress_MPa, params.rpm);
+    let rul_seconds = estimateRUL(this.fatigueCrackMeters, stress_MPa, params.rpm);
+      // Artificially crush RUL instantly if a critical fault is injected
+      if (this.faults.size > 0 && !this.isDiverting) {
+          rul_seconds = Math.min(rul_seconds, 65); // Plummet to ~1 minute
+      }
     
     // Anti-spoofing check
     const spoofCheck = checkGPSconsistency(gps.lat, gps.lon, this.inertial.lat, this.inertial.lon);
