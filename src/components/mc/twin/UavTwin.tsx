@@ -22,8 +22,8 @@ const HOTSPOT_POS: Record<string, [number, number, number]> = {
 };
 
 function Airframe({ rpm, vibration }: { rpm: number; vibration: number }) {
-  const prop = useRef<THREE.Group>(null);
-  const body = useRef<THREE.Group>(null);
+  const prop = React.useRef<THREE.Group>(null);
+  const body = React.useRef<THREE.Group>(null);
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.05);
@@ -36,73 +36,83 @@ function Airframe({ rpm, vibration }: { rpm: number; vibration: number }) {
     }
   });
 
-  const metal = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#5b6672", metalness: 0.65, roughness: 0.45 }),
-    [],
-  );
-  const dark = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#2c3440", metalness: 0.4, roughness: 0.6 }),
-    [],
-  );
-
+  const bodyMat = React.useMemo(() => new THREE.MeshStandardMaterial({ color: "#e3e7e8", metalness: 0.1, roughness: 0.8 }), []);
+  const darkMat = React.useMemo(() => new THREE.MeshStandardMaterial({ color: "#2c3440", metalness: 0.4, roughness: 0.6 }), []);
+  const propMat = React.useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1a1a", metalness: 0.3, roughness: 0.7 }), []);
+  const glassMat = React.useMemo(() => new THREE.MeshStandardMaterial({ color: "#111111", metalness: 0.9, roughness: 0.1 }), []);
+  
   return (
-    <group ref={body}>
-      {/* fuselage */}
-      <mesh material={metal} position={[0, 0, 0.6]} rotation-x={Math.PI / 2} castShadow>
-        <capsuleGeometry args={[0.3, 2.6, 8, 20]} />
+    <group ref={body} scale={[0.8, 0.8, 0.8]}>
+      {/* Main Fuselage */}
+      <mesh material={bodyMat} position={[0, 0, 0]}>
+        <cylinderGeometry args={[0.35, 0.25, 4.0, 16]} />
       </mesh>
-      {/* nose cone */}
-      <mesh material={dark} position={[0, 0, 2.15]} rotation-x={-Math.PI / 2}>
-        <coneGeometry args={[0.29, 0.5, 20]} />
+      
+      {/* Bulbous Radome (Front) */}
+      <mesh material={bodyMat} position={[0, 0.2, 1.6]} rotation={[-0.1, 0, 0]}>
+        <sphereGeometry args={[0.4, 32, 16]} />
       </mesh>
-      {/* wings */}
-      <mesh material={metal} position={[0, 0.02, 0.75]} castShadow>
-        <boxGeometry args={[6.2, 0.08, 0.66]} />
+      <mesh material={bodyMat} position={[0, 0.1, 1.8]}>
+        <cylinderGeometry args={[0.3, 0.4, 0.8, 16]} rotation={[Math.PI/2, 0, 0]} />
       </mesh>
-      {/* winglets */}
-      {[-3.05, 3.05].map((x) => (
-        <mesh key={x} material={dark} position={[x, 0.18, 0.75]}>
-          <boxGeometry args={[0.06, 0.36, 0.5]} />
+      
+      {/* Sensor Turret (Chin) */}
+      <mesh material={darkMat} position={[0, -0.4, 1.7]}>
+        <cylinderGeometry args={[0.15, 0.15, 0.2, 16]} />
+      </mesh>
+      <mesh material={glassMat} position={[0, -0.5, 1.7]}>
+        <sphereGeometry args={[0.15, 16, 16]} />
+      </mesh>
+
+      {/* Engine Intake (Top) */}
+      <mesh material={bodyMat} position={[0, 0.4, -0.8]}>
+        <boxGeometry args={[0.3, 0.25, 0.8]} />
+      </mesh>
+      <mesh material={darkMat} position={[0, 0.42, -0.38]} rotation={[0, 0, 0]}>
+        <planeGeometry args={[0.26, 0.2]} />
+      </mesh>
+
+      {/* Wings */}
+      <mesh material={bodyMat} position={[0, 0.1, 0.2]}>
+        <boxGeometry args={[7.0, 0.08, 0.6]} />
+      </mesh>
+      
+      {/* Pylons and Missiles */}
+      <group position={[1.5, -0.1, 0.2]}>
+        <mesh material={bodyMat} position={[0, 0, 0]}><boxGeometry args={[0.05, 0.3, 0.4]} /></mesh>
+        <mesh material={darkMat} position={[0, -0.2, 0.1]}><cylinderGeometry args={[0.08, 0.08, 1.2, 8]} rotation={[Math.PI/2, 0, 0]} /></mesh>
+      </group>
+      <group position={[-1.5, -0.1, 0.2]}>
+        <mesh material={bodyMat} position={[0, 0, 0]}><boxGeometry args={[0.05, 0.3, 0.4]} /></mesh>
+        <mesh material={darkMat} position={[0, -0.2, 0.1]}><cylinderGeometry args={[0.08, 0.08, 1.2, 8]} rotation={[Math.PI/2, 0, 0]} /></mesh>
+      </group>
+
+      {/* V-Tail (Inverted) */}
+      <mesh material={bodyMat} position={[0.4, -0.3, -1.8]} rotation={[0, 0, -Math.PI/4]}>
+        <boxGeometry args={[1.2, 0.05, 0.4]} />
+      </mesh>
+      <mesh material={bodyMat} position={[-0.4, -0.3, -1.8]} rotation={[0, 0, Math.PI/4]}>
+        <boxGeometry args={[1.2, 0.05, 0.4]} />
+      </mesh>
+      
+      {/* Vertical Stabilizer (Upwards) */}
+      <mesh material={bodyMat} position={[0, 0.4, -1.8]}>
+        <boxGeometry args={[0.05, 0.8, 0.4]} />
+      </mesh>
+
+      {/* Pusher Propeller (Rear) */}
+      <group position={[0, 0, -2.1]}>
+        <mesh material={bodyMat} rotation={[Math.PI/2, 0, 0]}>
+          <coneGeometry args={[0.2, 0.4, 16]} />
         </mesh>
-      ))}
-      {/* tail booms */}
-      {[-0.55, 0.55].map((x) => (
-        <mesh key={x} material={dark} position={[x, 0, -0.9]} rotation-x={Math.PI / 2}>
-          <cylinderGeometry args={[0.055, 0.055, 2.6, 12]} />
-        </mesh>
-      ))}
-      {/* horizontal stabiliser */}
-      <mesh material={metal} position={[0, 0.16, -2.1]}>
-        <boxGeometry args={[1.5, 0.06, 0.4]} />
-      </mesh>
-      {[-0.55, 0.55].map((x) => (
-        <mesh key={x} material={dark} position={[x, 0.36, -2.1]}>
-          <boxGeometry args={[0.06, 0.5, 0.36]} />
-        </mesh>
-      ))}
-      {/* payload turret */}
-      <mesh material={dark} position={[0, -0.32, 0.95]}>
-        <sphereGeometry args={[0.2, 18, 14]} />
-      </mesh>
-      {/* propeller */}
-      <group ref={prop} position={[0, 0, 2.45]}>
-        <mesh material={dark}>
-          <sphereGeometry args={[0.09, 12, 10]} />
-        </mesh>
-        {[0, 1, 2].map((i) => (
-          <mesh
-            key={i}
-            material={metal}
-            rotation-z={(i * Math.PI * 2) / 3}
-            position={[
-              Math.cos((i * Math.PI * 2) / 3) * 0.42,
-              Math.sin((i * Math.PI * 2) / 3) * 0.42,
-              0,
-            ]}
-          >
-            <boxGeometry args={[0.8, 0.09, 0.03]} />
+        <group ref={prop}>
+          <mesh material={propMat} position={[0, 0, -0.1]}>
+            <boxGeometry args={[1.8, 0.05, 0.05]} />
           </mesh>
-        ))}
+          <mesh material={propMat} position={[0, 0, -0.1]} rotation={[0, 0, Math.PI/2]}>
+            <boxGeometry args={[1.8, 0.05, 0.05]} />
+          </mesh>
+        </group>
       </group>
     </group>
   );
