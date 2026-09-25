@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CheckCircle2, ShieldAlert, Activity, XCircle, AlertTriangle, PlaneLanding, Wrench, X } from "lucide-react";
+import { CheckCircle2, ShieldAlert, Activity, XCircle, AlertTriangle, PlaneLanding, Wrench, X, Download, MapPin } from "lucide-react";
 import { useMission } from "@/lib/twin/store";
 import { cn } from "@/lib/utils";
 import { SCENARIO_BY_KEY } from "@/lib/twin/profiles";
