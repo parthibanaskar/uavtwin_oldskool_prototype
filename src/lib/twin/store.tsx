@@ -119,6 +119,22 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [rul, setRul] = useState<Partial<Record<Subsystem, number | null>>>({});
   const [sessionId, setSessionId] = useState<string | null>(null);
 
+    // Auto-resolve critical alerts to show the mitigation UI popup automatically
+  useEffect(() => {
+    if (alerts.length === 0 || paused) return;
+    const criticals = alerts.filter(a => a.severity === 'critical' && !resolvedAlerts.has(a.id));
+    if (criticals.length > 0) {
+      const timer = setTimeout(() => {
+        setResolvedAlerts(prev => {
+          const next = new Set(prev);
+          criticals.forEach(c => next.add(c.id));
+          return next;
+        });
+      }, 4000); // Wait 4 seconds for dramatic effect before fixing
+      return () => clearTimeout(timer);
+    }
+  }, [alerts, resolvedAlerts, paused]);
+
   const log = useCallback((kind: string, payload: Record<string, unknown>) => {
     chainQueue.current = chainQueue.current.then(async () => {
       const entry = await appendEntry(chainRef.current, kind, payload);
