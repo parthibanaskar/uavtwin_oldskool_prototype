@@ -50,7 +50,7 @@ export class SimulatedTelemetrySource implements TelemetrySource {
   private inertial = { lat: BASE_LAT, lon: BASE_LON };
   private vibPhase = 0;
   private speedMultiplier = 1;
-  private fatigueCrackMeters = 0.0065; // ~4.5 hours RUL realistically // Initial flaw size of 1mm
+  private fatigueCrackMeters = 0.001; // Initial flaw size of 1mm
   private faultHistory = new Set<string>();
 
   constructor(options: SimulatorOptions = {}) {
@@ -110,7 +110,7 @@ export class SimulatedTelemetrySource implements TelemetrySource {
     this.gpsBias = { lat: 0, lon: 0 };
     this.faultHistory.clear();
     this.t = 0;
-    this.fatigueCrackMeters = 0.0065;
+    this.fatigueCrackMeters = 0.001;
     this.history = [];
     this.isDiverting = false;
     this.divertStartT = 0;
