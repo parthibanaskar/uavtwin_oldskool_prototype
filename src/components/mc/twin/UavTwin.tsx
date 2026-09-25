@@ -22,8 +22,8 @@ const HOTSPOT_POS: Record<string, [number, number, number]> = {
 };
 
 function Airframe({ rpm, vibration }: { rpm: number; vibration: number }) {
-  const prop = React.useRef<THREE.Group>(null);
-  const body = React.useRef<THREE.Group>(null);
+  const prop = useRef<THREE.Group>(null);
+  const body = useRef<THREE.Group>(null);
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.05);
@@ -36,10 +36,10 @@ function Airframe({ rpm, vibration }: { rpm: number; vibration: number }) {
     }
   });
 
-  const bodyMat = React.useMemo(() => new THREE.MeshStandardMaterial({ color: "#e3e7e8", metalness: 0.1, roughness: 0.8 }), []);
-  const darkMat = React.useMemo(() => new THREE.MeshStandardMaterial({ color: "#2c3440", metalness: 0.4, roughness: 0.6 }), []);
-  const propMat = React.useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1a1a", metalness: 0.3, roughness: 0.7 }), []);
-  const glassMat = React.useMemo(() => new THREE.MeshStandardMaterial({ color: "#111111", metalness: 0.9, roughness: 0.1 }), []);
+  const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e3e7e8", metalness: 0.1, roughness: 0.8 }), []);
+  const darkMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#2c3440", metalness: 0.4, roughness: 0.6 }), []);
+  const propMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1a1a", metalness: 0.3, roughness: 0.7 }), []);
+  const glassMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#111111", metalness: 0.9, roughness: 0.1 }), []);
   
   return (
     <group ref={body} scale={[0.8, 0.8, 0.8]}>
