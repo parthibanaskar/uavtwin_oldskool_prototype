@@ -48,6 +48,9 @@ export function PostFlightReview() {
     : { label: "MISSION COMPLETE — SAFE LANDING", color: "text-green-400", borderTop: "border-green-500", icon: PlaneLanding, iconColor: "text-green-400" };
 
   const OutcomeIcon = outcome.icon;
+  const [closed, setClosed] = React.useState(false);
+  if (closed) return null;
+
 
   // Maintenance recommendations
   type Sev = "critical" | "warning" | "ok";
@@ -83,6 +86,10 @@ export function PostFlightReview() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 overflow-y-auto">
       <div className={cn("w-full max-w-2xl rounded-lg shadow-2xl my-auto", "bg-[#0a0c10] border border-border/40")}>
         
+        {/* Close button */}
+        <button onClick={() => setClosed(true)} className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-white rounded-full hover:bg-white/10 transition-colors">
+          <X className="size-5" />
+        </button>
         {/* Colored top bar */}
         <div className={cn("h-1 rounded-t-lg", outcome.borderTop, "bg-current opacity-80")} style={{ backgroundColor: isCrashed ? "#ef4444" : isDiverted ? "#f59e0b" : "#22c55e" }} />
 
@@ -143,6 +150,52 @@ export function PostFlightReview() {
                     <span className="text-[0.65rem] font-semibold text-amber-300">
                       {SCENARIO_BY_KEY[f]?.label ?? f}
                     </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Detailed Threat Timeline */}
+          {alerts.length > 0 && (
+            <div>
+              <p className="text-[0.65rem] uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                <Activity className="size-3.5" /> Detailed Incident Timeline & Forensics
+              </p>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                {alerts.map(a => (
+                  <div key={a.id} className={cn(
+                    "rounded-md border p-3",
+                    a.severity === "critical" ? "border-red-500/40 bg-red-950/20" : 
+                    a.severity === "warning" ? "border-amber-500/30 bg-amber-950/20" : 
+                    a.severity === "info" ? "border-blue-500/30 bg-blue-950/20" :
+                    "border-border/40 bg-muted/20"
+                  )}>
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "text-[0.55rem] font-bold uppercase px-1.5 py-0.5 rounded",
+                          a.severity === "critical" ? "bg-red-500/20 text-red-400" : 
+                          a.severity === "warning" ? "bg-amber-500/20 text-amber-400" : "bg-blue-500/20 text-blue-400"
+                        )}>
+                          {a.severity}
+                        </span>
+                        <span className="text-xs font-bold text-white">{a.title}</span>
+                      </div>
+                      <span className="text-[0.65rem] text-muted-foreground font-mono">T+{Math.floor(a.missionTime)}s</span>
+                    </div>
+                    {a.narrative && <p className="text-[0.65rem] text-muted-foreground/90 mt-1.5 leading-relaxed">{a.narrative}</p>}
+                    
+                    {a.contributions && a.contributions.length > 0 && (
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        {a.contributions.map((c, i) => (
+                          <div key={i} className="flex flex-col bg-black/40 rounded px-2 py-1.5 border border-white/5">
+                            <span className="text-[0.55rem] uppercase text-muted-foreground">{c.label}</span>
+                            <span className="text-xs font-mono font-medium text-white">{c.detail || c.value + "% impact"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
