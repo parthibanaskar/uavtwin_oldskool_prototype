@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, Wrench, Zap, Activity, AlertTriangle, X, PlaneLanding } from "lucide-react";
 import { useMission } from "@/lib/twin/store";
 import { cn } from "@/lib/utils";
-import { PARAM_SPECS } from "@/lib/twin/profiles";
+import { PARAM_SPECS, FLIGHT_PROFILES } from "@/lib/twin/profiles";
 import { DIVERT_SITES, haversineDistance } from "@/lib/twin/selfheal";
 import type { Alert } from "@/lib/twin/types";
 
@@ -81,10 +81,10 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
       {
         id: "oil1",
         label: "Switching to auxiliary electric oil scavenger pump",
-        detail: `Primary pump output detected at ${p ? fmt(p.oilPressure, 1) : "—"} kPa (below ${PARAM_SPECS.oilPressure.nominal} kPa nominal). Aux pump engaged to restore gallery pressure.`,
+        detail: `Primary pump output detected at ${p ? fmt(p.oilPressure, 1) : "—"} kPa (below ${FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.oilPressure} kPa nominal). Aux pump engaged to restore gallery pressure.`,
         sensorKey: "oilPressure",
         sensorBefore: p ? `${fmt(p.oilPressure, 1)} kPa` : "—",
-        sensorAfter: `${PARAM_SPECS.oilPressure.nominal} kPa (target)`,
+        sensorAfter: `${FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.oilPressure} kPa (target)`,
         status: "pending",
       },
       {
@@ -101,10 +101,10 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
       {
         id: "fuel1",
         label: "Isolating degraded primary fuel pump",
-        detail: `Fuel flow at ${p ? fmt(p.fuelFlow, 2) : "—"} L/h — ${p ? ((1 - p.fuelFlow / PARAM_SPECS.fuelFlow.nominal) * 100).toFixed(0) : "—"}% below nominal. Closing primary pump isolation valve.`,
+        detail: `Fuel flow at ${p ? fmt(p.fuelFlow, 2) : "—"} L/h — ${p ? ((1 - p.fuelFlow / FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.fuelFlow) * 100).toFixed(0) : "—"}% below nominal. Closing primary pump isolation valve.`,
         sensorKey: "fuelFlow",
         sensorBefore: p ? `${fmt(p.fuelFlow, 2)} L/h` : "—",
-        sensorAfter: `${PARAM_SPECS.fuelFlow.nominal} L/h (target on secondary)`,
+        sensorAfter: `${FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.fuelFlow} L/h (target on secondary)`,
         status: "pending",
       },
       {
@@ -118,10 +118,10 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
       {
         id: "egt1",
         label: "Enriching fuel mixture by 6%",
-        detail: `EGT at ${p ? fmt(p.egt, 0) : "—"} °C (nominal ${PARAM_SPECS.egt.nominal} °C). Richer mixture shifts combustion away from peak EGT, cooling turbine section by ~${p ? fmt((p.egt - PARAM_SPECS.egt.nominal) * 0.6, 0) : "—"} °C.`,
+        detail: `EGT at ${p ? fmt(p.egt, 0) : "—"} °C (nominal ${FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.egt} °C). Richer mixture shifts combustion away from peak EGT, cooling turbine section by ~${p ? fmt((p.egt - FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.egt) * 0.6, 0) : "—"} °C.`,
         sensorKey: "egt",
         sensorBefore: p ? `${fmt(p.egt, 0)} °C` : "—",
-        sensorAfter: p ? `~${fmt(PARAM_SPECS.egt.nominal + (p.egt - PARAM_SPECS.egt.nominal) * 0.4, 0)} °C` : "—",
+        sensorAfter: p ? `~${fmt(FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.egt + (p.egt - FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.egt) * 0.4, 0)} °C` : "—",
         status: "pending",
       },
       {
@@ -149,10 +149,10 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
       {
         id: "bus1",
         label: "Shedding non-essential electrical loads",
-        detail: `Bus voltage at ${p ? fmt(p.busVoltage, 1) : "—"} V (nominal ${PARAM_SPECS.busVoltage.nominal} V). Payload heaters, downlink amplifier, and nav display dimmed to reduce draw by ~8A.`,
+        detail: `Bus voltage at ${p ? fmt(p.busVoltage, 1) : "—"} V (nominal ${FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.busVoltage} V). Payload heaters, downlink amplifier, and nav display dimmed to reduce draw by ~8A.`,
         sensorKey: "busVoltage",
         sensorBefore: p ? `${fmt(p.busVoltage, 1)} V` : "—",
-        sensorAfter: `${PARAM_SPECS.busVoltage.nominal} V (target)`,
+        sensorAfter: `${FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.busVoltage} V (target)`,
         status: "pending",
       },
       {
