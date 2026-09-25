@@ -180,6 +180,16 @@ export const FLIGHT_PROFILES: Record<FlightProfile, ProfileSpec> = {
     busVoltage: 27.8,
     cht: 140,
   }),
+  shutdown: makeProfile("Engine Off", "Grounded, engine off", 0, {
+    rpm: 0,
+    egt: 25,
+    vibration: 0.0,
+    oilPressure: 0.0,
+    oilTemp: 25,
+    fuelFlow: 0.0,
+    busVoltage: 24.0,
+    cht: 25,
+  }),
 };
 
 export const HOTSPOTS: Record<string, { label: string; subsystem: Subsystem }> = {

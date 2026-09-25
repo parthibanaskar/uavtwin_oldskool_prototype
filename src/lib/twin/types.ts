@@ -30,7 +30,7 @@ export const SUBSYSTEMS: Subsystem[] = [
   "nav",
 ];
 
-export type FlightProfile = "idle" | "takeoff" | "cruise" | "loiter" | "descent";
+export type FlightProfile = "idle" | "takeoff" | "cruise" | "loiter" | "descent" | "shutdown";
 
 export type Severity = "nominal" | "advisory" | "warning" | "critical";
 
