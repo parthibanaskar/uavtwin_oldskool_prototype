@@ -69,7 +69,7 @@ export function getWoschniHeatTransfer(mean_p_kpa: number, mean_T_K: number, mea
 // --- Section 5: Fatigue & RUL ---
 
 export const FATIGUE_SPECS = {
-  C: 1e-11,
+  C: 1.11e-10,
   m: 2.5,
   Y: 1.12, // Geometry factor
   a_crit: 0.015, // 15mm critical crack length
