@@ -410,6 +410,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     setFrames([]);
     setLive(null);
     setBlackbox([]);
+      chainRef.current = [];
     setCursor(null);
     setResolvedAlerts(new Set());
     setSilentlyResolvedAlerts(new Set());

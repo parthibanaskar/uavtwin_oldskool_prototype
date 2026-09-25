@@ -56,7 +56,7 @@ export function TopBar() {
   } else if (criticalCount > 0 || rul < 3600) {
     liveStatus = "LIVE STATUS: HEAVILY DAMAGED • CANNOT COMPLETE MISSION";
     statusColor = "text-destructive font-bold animate-pulse";
-  } else if (activeWarnings.length > 0 || rul < 7200) {
+  } else if (activeWarnings.length > 0) {
     liveStatus = "LIVE STATUS: DEGRADED • PROCEED WITH CAUTION";
     statusColor = "text-amber-500 font-bold";
   }

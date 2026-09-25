@@ -82,7 +82,7 @@ export function AlertFeed({ className }: { className?: string }) {
               </div>
 
             <div className="pt-2 mt-2 border-t border-border/30">
-              {resolvedAlerts.has(a.id) ? (
+              {resolvedAlerts.has(a.id) && a.severity !== 'info' && a.severity !== 'nominal' ? (
                 <div className="w-full rounded-sm bg-green-500/10 p-2 text-left border border-green-500/30">
                   <p className="text-xs font-bold text-green-400 mb-1">
                     {a.key === "prescriptiveThrottle" ? "RUL EXTENDED" : "SYSTEM RESTORED"}

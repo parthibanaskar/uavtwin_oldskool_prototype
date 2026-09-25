@@ -594,7 +594,7 @@ export function evaluateAlerts(d: Derived): AlertCandidate[] {
   // ---------------------------------------------------------------------------------------------------------
   
     // --- Healthy AI Logs ---
-    if (d.sample.activeFaults.length === 0 && !phys?.landing_mode && !phys?.landed && !phys?.crashed && d.sample.profile === "cruise" && Math.random() < 0.05) {
+    if (d.sample.activeFaults.length === 0 && !phys?.landing_mode && !phys?.landed && !phys?.crashed && d.sample.profile === "cruise" && Math.random() < 0.005) {
       const msgs = [
         "PINN model: Combustion efficiency optimal (99.8%)",
         "Vibration signature matching baseline harmonic.",
