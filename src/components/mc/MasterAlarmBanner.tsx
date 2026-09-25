@@ -31,7 +31,6 @@ export function MasterAlarmBanner() {
   const handleFixAll = () => {
     activeAlerts.forEach(a => {
       const clears: Record<string, string[]> = {
-        bearingWear: ["bearingWear"],
         propImbalance: ["propImbalance"],
         oilPressureDrop: ["oilStarvation"],
         fuelDelivery: ["fuelBlockage", "fuelPumpDegrade"],
