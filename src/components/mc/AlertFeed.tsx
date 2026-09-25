@@ -93,7 +93,7 @@ export function AlertFeed({ className }: { className?: string }) {
                       : "Mitigation sequence executed successfully. Fault cleared from edge controller. Subsystem parameters have stabilized and returned to NOMINAL profiles.")}
                   </div>
                 </div>
-              ) : a.severity !== "nominal" && !a.key.startsWith("suddenShift_") && !a.key.startsWith("auto_advisory_") ? (
+              ) : a.severity !== "nominal" && a.severity !== "info" && !a.key.startsWith("suddenShift_") && !a.key.startsWith("auto_advisory_") ? (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
