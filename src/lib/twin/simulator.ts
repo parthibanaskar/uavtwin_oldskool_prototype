@@ -274,7 +274,10 @@ export class HardwareTelemetrySource implements TelemetrySource {
     // Connect to the GCS API Gateway (Express).
     // In production (Vercel), VITE_GCS_WS_URL should be set to a deployed backend.
     // If it is not set, we fall back to localhost for local dev.
-    const wsUrl = (import.meta.env.VITE_GCS_WS_URL as string | undefined) ?? "ws://localhost:3001";
+    let wsUrl = (import.meta.env.VITE_GCS_WS_URL as string | undefined) ?? "ws://localhost:3001";
+      if (typeof window !== 'undefined' && window.location.search.includes('local=true')) {
+          wsUrl = "ws://localhost:3001";
+      }
     
     let connectionAttempt: WebSocket;
     try {
