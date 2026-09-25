@@ -165,7 +165,7 @@ export function UavTwin() {
   }, []);
 
   return (
-    <div className="relative w-full h-full bg-[#101720] overflow-hidden" style={{ perspective: "1000px" }}>
+    <div className="absolute inset-0 bg-[#101720] overflow-hidden flex flex-col" style={{ perspective: "1000px" }}>
       {/* ── Sketchfab iframe (Scaled slightly to allow shaking without black bars) ── */}
       <iframe
         ref={iframeRef}
@@ -173,8 +173,8 @@ export function UavTwin() {
         src=""
         allow="autoplay; fullscreen; xr-spatial-tracking"
         allowFullScreen
-        className="absolute inset-0 w-full h-full border-0 origin-center"
-        style={physicsStyles}
+        className="absolute top-0 left-0 m-0 p-0 border-0 origin-center !w-full !h-full"
+        style={{ ...physicsStyles, display: "block" }}
       />
 
       {/* ── Loading Overlay ── */}
