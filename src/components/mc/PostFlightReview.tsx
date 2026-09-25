@@ -22,8 +22,19 @@ function Stat({ label, value, alert, sub }: { label: string; value: string; aler
 }
 
 export function PostFlightReview() {
-  const { displayed, alerts, healActions, isDiverted } = useMission();
+  const { displayed, alerts, healActions, isDiverted, blackbox } = useMission();
   const phys = displayed?.sample.physics;
+  const [closed, setClosed] = useState(false);
+
+  const exportLog = () => {
+    const blob = new Blob([JSON.stringify(blackbox, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = light-blackbox-.json;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   const health = displayed?.health;
 
   // Only show if landed or crashed
