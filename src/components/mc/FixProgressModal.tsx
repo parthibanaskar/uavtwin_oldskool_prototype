@@ -209,6 +209,46 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
     ],
   };
 
+    if (alert.key.startsWith("suddenShift_")) {
+    const paramKey = alert.key.replace("suddenShift_", "");
+    const val = p ? (p as any)[paramKey] : 0;
+    
+    if (paramKey === "fuelFlow") {
+      return [
+        {
+          id: "ss_f1",
+          label: "Isolating primary fuel pump & engaging secondary path",
+          detail: \Anomaly detected in fuel flow signature. Rerouting delivery through auxiliary lines to bypass potential blockage or pump degradation.\,
+          sensorKey: "fuelFlow",
+          sensorBefore: p ? \ L/h\ : "—",
+          sensorAfter: p ? \ L/h\ : "—",
+          status: "pending",
+        },
+        {
+          id: "ss_f2",
+          label: "Re-trimming governor for new fuel flow dynamics",
+          detail: \Recalibrating electronic governor to maintain target RPM on the secondary path. Mixture enriched to prevent lean blowout during transition.\,
+          status: "pending",
+        },
+      ];
+    }
+    
+    return [
+      {
+        id: "ss_g1",
+        label: \Re-calibrating \ actuator setpoints\,
+        detail: \XAI identified a deviation in \ (\). Reverting PID controller limits to nominal profiles to arrest exponential divergence.\,
+        status: "pending",
+      },
+      {
+        id: "ss_g2",
+        label: "Isolating affected sensor bus & resetting edge model",
+        detail: "Switching to redundant sensor polling and clearing corrupted state from the physics-informed neural network.",
+        status: "pending",
+      }
+    ];
+  }
+
   return plans[alert.key] ?? [
     {
       id: "generic1",
