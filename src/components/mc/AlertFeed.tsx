@@ -47,7 +47,7 @@ export function AlertFeed({ className }: { className?: string }) {
               >
                 <Icon className={cn("shrink-0", isProblem ? "size-5 mt-0.5 animate-pulse" : "size-4 mt-0.5", toneText[tone])} />
                 <div className="min-w-0 flex-1">
-                  <p className={cn("truncate font-semibold", isProblem ? "text-base uppercase" : "text-sm")}>{a.title}</p>
+                  <p className={cn("font-semibold leading-snug", isProblem ? "text-base uppercase" : "text-sm")}>{a.title}</p>
                   <div className="mt-1 flex flex-wrap gap-1">
                   <Chip tone={tone}>{a.severity}</Chip>
                   <Chip tone="info">conf {(a.confidence * 100).toFixed(0)}%</Chip>

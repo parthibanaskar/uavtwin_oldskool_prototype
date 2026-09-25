@@ -64,15 +64,15 @@
 
 :root {
   --radius: 0.3rem;
-  --background: oklch(0.16 0.018 250);
-  --foreground: oklch(0.93 0.012 230);
-  --card: oklch(0.204 0.021 252);
+  --background: oklch(0.14 0.01 220);
+  --foreground: oklch(0.96 0.01 220);
+  --card: oklch(0.18 0.01 220);
   --card-foreground: oklch(0.93 0.012 230);
-  --panel: oklch(0.185 0.02 252);
+  --panel: oklch(0.16 0.01 220);
   --popover: oklch(0.204 0.021 252);
   --popover-foreground: oklch(0.93 0.012 230);
-  --primary: oklch(0.8 0.14 190);
-  --primary-foreground: oklch(0.16 0.018 250);
+  --primary: oklch(0.7 0.18 45); /* AMBER */
+  --primary-foreground: oklch(0.1 0.01 220);
   --secondary: oklch(0.28 0.022 252);
   --secondary-foreground: oklch(0.93 0.012 230);
   --muted: oklch(0.26 0.02 252);
