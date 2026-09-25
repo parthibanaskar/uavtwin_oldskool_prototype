@@ -188,9 +188,9 @@ export function UavTwin() {
       )}
 
       {/* ── Temporary Debug Nodes List ── */}
-      <div className="absolute top-2 right-2 w-64 max-h-48 overflow-y-auto bg-black/80 text-white text-[11px] p-2 rounded z-50 pointer-events-auto border border-white/20">
-        <p className="font-bold mb-1 text-yellow-400">Parts List (Debug):</p>
-        <p className="text-gray-300 mb-1 leading-tight">If there is no 'propeller' or similar here, it's a baked mesh.</p>
+      <div className="absolute top-2 right-2 w-64 max-h-48 overflow-y-auto bg-red-900/90 text-white text-[11px] p-3 rounded z-50 pointer-events-auto border-2 border-red-500 shadow-xl">
+        <p className="font-bold mb-1 text-yellow-400 uppercase tracking-widest">⚠️ Parts List (Debug):</p>
+        <p className="text-white mb-2 leading-tight font-medium">Please read these names! If there is no 'propeller', it's a baked mesh.</p>
         {debugNodes.length === 0 ? "Loading nodes..." : debugNodes.join(", ")}
       </div>
 
