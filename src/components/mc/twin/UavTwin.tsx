@@ -192,15 +192,8 @@ export function UavTwin() {
         </div>
       )}
 
-      {/* ── Legend ── */}
-      {ready && (
-        <div className="absolute top-3 right-3 pointer-events-none">
-          <p className="rounded bg-card/80 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur-sm">
-            Hotspots colour-coded by live subsystem health.
-            <br />Clicking a badge in the feed focuses the matching hotspot.
-          </p>
-        </div>
-      )}
+
+
     </div>
   );
 }
