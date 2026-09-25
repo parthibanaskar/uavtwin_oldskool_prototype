@@ -322,6 +322,9 @@ function FixProgressPanel({ alert, onDone }: Props) {
   // Countdown progress bar: only starts after all steps are done
   useEffect(() => {
     if (!done) return;
+    if (alert && ["prescriptiveDivert", "imminentCrash", "bearingPermanentDamage", "cascadingFailures", "bearingWear"].includes(alert.key)) {
+      return; // Wait for manual divert click
+    }
     const interval = setInterval(() => {
       setProgress(p => {
         if (p <= 0) { clearInterval(interval); onDone(); return 0; }
@@ -330,7 +333,7 @@ function FixProgressPanel({ alert, onDone }: Props) {
     }, 100);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [done]);
+  }, [done, onDone, alert]);
 
   const severityColor = alert.severity === "critical"
     ? "border-red-500/50 text-red-400"
@@ -487,12 +490,12 @@ export function FixProgressModal() {
   // And DO NOT show it if we are already diverted!
   useEffect(() => {
     for (const a of alerts) {
+      const isCriticalHardwareOrDivert = ["bearingWear", "bearingPermanentDamage", "cascadingFailures", "prescriptiveDivert", "imminentCrash"].includes(a.key);
       if (
-        resolvedAlerts.has(a.id) && 
         !silentlyResolvedAlerts?.has(a.id) &&
         !shownIds.has(a.id) && 
         !isDiverted &&
-        (a.severity === "critical" || ["bearingPermanentDamage", "cascadingFailures", "prescriptiveDivert", "imminentCrash"].includes(a.key))
+        (isCriticalHardwareOrDivert || (resolvedAlerts.has(a.id) && a.severity === "critical"))
       ) {
         shownIds.add(a.id);
         setFixQueue(prev => [...prev, a]);
