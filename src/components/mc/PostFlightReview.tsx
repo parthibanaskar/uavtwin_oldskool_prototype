@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { CheckCircle2, ShieldAlert, Activity, XCircle, AlertTriangle, PlaneLanding, Wrench } from "lucide-react";
 import { useMission } from "@/lib/twin/store";
 import { cn } from "@/lib/utils";
@@ -48,8 +49,7 @@ export function PostFlightReview() {
     : { label: "MISSION COMPLETE — SAFE LANDING", color: "text-green-400", borderTop: "border-green-500", icon: PlaneLanding, iconColor: "text-green-400" };
 
   const OutcomeIcon = outcome.icon;
-  const [closed, setClosed] = React.useState(false);
-  if (closed) return null;
+  
 
 
   // Maintenance recommendations
