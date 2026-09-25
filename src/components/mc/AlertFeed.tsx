@@ -99,8 +99,7 @@ export function AlertFeed({ className }: { className?: string }) {
                     e.stopPropagation();
                     // Map alert keys back to scenario injection keys to clear them
                     const clears: Record<string, string[]> = {
-                      bearingWear: ["bearingWear"],
-                      propImbalance: ["propImbalance"],
+                                            propImbalance: ["propImbalance"],
                       oilPressureDrop: ["oilStarvation"],
                       fuelDelivery: ["fuelBlockage", "fuelPumpDegrade"],
                       electricalFault: ["busSag"],
@@ -114,7 +113,7 @@ export function AlertFeed({ className }: { className?: string }) {
                     const toClear = clears[a.key] || [a.key];
                     const hasPhysicalFaults = alerts.some(al => !["prescriptiveDivert", "imminentCrash", "prescriptiveThrottle", "landingApproach", "landingGears", "landingFlare", "landingTouchdown", "crashDetected", "cascadingFailures", "bearingPermanentDamage"].includes(al.key) && !resolvedAlerts.has(al.id));
                     
-                    if (a.key === "prescriptiveDivert" || a.key === "imminentCrash" || a.key === "cascadingFailures" || a.key === "bearingPermanentDamage") {
+                    if (a.key === "prescriptiveDivert" || a.key === "imminentCrash" || a.key === "cascadingFailures" || a.key === "bearingPermanentDamage" || a.key === "bearingWear") {
                       if (!hasPhysicalFaults) {
                         commandSafeLanding("Safdarjung Airport (VDSJ)");
                         divert(28.58, 77.20);
