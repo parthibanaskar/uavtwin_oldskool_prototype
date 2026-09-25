@@ -246,7 +246,14 @@ export class SimulatedTelemetrySource implements TelemetrySource {
         eta_th: thermo.eta_th,
         fatigue_crack_m: this.fatigueCrackMeters,
         rul_seconds,
-        gpsSpoofed: spoofCheck.spoofed
+        gpsSpoofed: spoofCheck.spoofed,
+          altitude_ft: 2000.0,
+          mission_distance_km: Math.max(0, 300.0 - (this.t * 0.046)),
+          mission_time_seconds: Math.max(0, 300.0 - (this.t * 0.046)) / 0.046,
+          cumulative_damage_pct: (this.fatigueCrackMeters / 0.0025) * 100.0,
+          landing_mode: false,
+          landed: false,
+          crashed: false
       }
     };
     this.onSample?.(sample);
