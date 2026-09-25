@@ -83,17 +83,17 @@ export function PostFlightReview() {
   const uniqueRecs = recs.filter(r => seen.has(r.label) ? false : (seen.add(r.label), true));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 overflow-y-auto">
-      <div className={cn("w-full max-w-2xl rounded-lg shadow-2xl my-auto", "bg-[#0a0c10] border border-border/40")}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 sm:p-6">
+      <div className={cn("relative w-full max-w-2xl rounded-lg shadow-2xl flex flex-col max-h-[90vh]", "bg-[#0a0c10] border border-border/40")}>
         
         {/* Close button */}
         <button onClick={() => setClosed(true)} className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-white rounded-full hover:bg-white/10 transition-colors">
           <X className="size-5" />
         </button>
         {/* Colored top bar */}
-        <div className={cn("h-1 rounded-t-lg", outcome.borderTop, "bg-current opacity-80")} style={{ backgroundColor: isCrashed ? "#ef4444" : isDiverted ? "#f59e0b" : "#22c55e" }} />
+        <div className={cn("shrink-0 h-1 rounded-t-lg", outcome.borderTop, "bg-current opacity-80")} style={{ backgroundColor: isCrashed ? "#ef4444" : isDiverted ? "#f59e0b" : "#22c55e" }} />
 
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto custom-scrollbar">
           {/* Header */}
           <div className="flex items-center gap-4">
             <OutcomeIcon className={cn("size-12 shrink-0", outcome.iconColor)} />
