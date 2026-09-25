@@ -209,7 +209,7 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
     ],
   };
 
-    if (alert.key.startsWith("suddenShift_")) {
+  if (alert.key.startsWith("suddenShift_")) {
     const paramKey = alert.key.replace("suddenShift_", "");
     const val = p ? (p as any)[paramKey] : 0;
     
@@ -218,16 +218,16 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
         {
           id: "ss_f1",
           label: "Isolating primary fuel pump & engaging secondary path",
-          detail: \Anomaly detected in fuel flow signature. Rerouting delivery through auxiliary lines to bypass potential blockage or pump degradation.\,
+          detail: `Anomaly detected in fuel flow signature. Rerouting delivery through auxiliary lines to bypass potential blockage or pump degradation.`,
           sensorKey: "fuelFlow",
-          sensorBefore: p ? \ L/h\ : "—",
-          sensorAfter: p ? \ L/h\ : "—",
+          sensorBefore: p ? `${fmt(p.fuelFlow, 1)} L/h` : "—",
+          sensorAfter: p ? `${fmt(p.fuelFlow * 1.05, 1)} L/h` : "—",
           status: "pending",
         },
         {
           id: "ss_f2",
           label: "Re-trimming governor for new fuel flow dynamics",
-          detail: \Recalibrating electronic governor to maintain target RPM on the secondary path. Mixture enriched to prevent lean blowout during transition.\,
+          detail: `Recalibrating electronic governor to maintain target RPM on the secondary path. Mixture enriched to prevent lean blowout during transition.`,
           status: "pending",
         },
       ];
@@ -236,8 +236,8 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
     return [
       {
         id: "ss_g1",
-        label: \Re-calibrating \ actuator setpoints\,
-        detail: \XAI identified a deviation in \ (\). Reverting PID controller limits to nominal profiles to arrest exponential divergence.\,
+        label: `Re-calibrating ${alert.subsystem} actuator setpoints`,
+        detail: `XAI identified a deviation in ${paramKey} (${val ? val.toFixed(1) : "—"}). Reverting PID controller limits to nominal profiles to arrest exponential divergence.`,
         status: "pending",
       },
       {
@@ -287,11 +287,11 @@ function FixProgressPanel({ alert, onDone }: Props) {
   }, DIVERT_SITES[0]);
 
   function handleDivertNow() {
-      commandSafeLanding(nearestSite.name);
-      divert(nearestSite.lat, nearestSite.lon);
-      setDiverted(true);
-      onDone();
-    }
+    commandSafeLanding(nearestSite.name);
+    divert(nearestSite.lat, nearestSite.lon);
+    setDiverted(true);
+    onDone();
+  }
 
   useEffect(() => {
     if (done) return;
