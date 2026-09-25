@@ -284,10 +284,7 @@ export class SimulatedTelemetrySource implements TelemetrySource {
       } else if (engineFailed) {
           if (!this.engineFailT) this.engineFailT = this.t;
           currentAlt = Math.max(0, 2000.0 - ((this.t - this.engineFailT) * 300));
-          if (currentAlt <= 0) {
-              isCrashed = true;
-              this.faults.clear();
-          }
+          if (currentAlt <= 0) { isCrashed = true; }
       }
 
       if (this.isDiverting && (this.t - this.divertStartT) * 0.046 >= 4.0) {
