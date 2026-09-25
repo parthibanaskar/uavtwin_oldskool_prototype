@@ -51,6 +51,7 @@ export class SimulatedTelemetrySource implements TelemetrySource {
   private vibPhase = 0;
   private speedMultiplier = 1;
   private fatigueCrackMeters = 0.001; // Initial flaw size of 1mm
+  private faultHistory = new Set<string>();
 
   constructor(options: SimulatorOptions = {}) {
     this.intervalMs = options.intervalMs ?? 750;
@@ -96,6 +97,7 @@ export class SimulatedTelemetrySource implements TelemetrySource {
 
   injectFault(key: string) {
     if (!this.faults.has(key)) this.faults.set(key, 0);
+    this.faultHistory.add(key);
   }
 
   clearFault(key: string) {
@@ -106,6 +108,7 @@ export class SimulatedTelemetrySource implements TelemetrySource {
   clearAllFaults() {
     this.faults.clear();
     this.gpsBias = { lat: 0, lon: 0 };
+    this.faultHistory.clear();
   }
 
   activeFaults() {
