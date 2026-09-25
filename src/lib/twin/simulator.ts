@@ -240,9 +240,13 @@ export class SimulatedTelemetrySource implements TelemetrySource {
     const cycles_this_tick = (params.rpm / 60) * dt;
     this.fatigueCrackMeters = integrateParisLaw(this.fatigueCrackMeters, stress_MPa, cycles_this_tick);
     let rul_seconds = estimateRUL(this.fatigueCrackMeters, stress_MPa, params.rpm);
-      // Artificially crush RUL instantly if a critical fault is injected
+      // Artificially crush RUL instantly if a critical fault is injected and let it tick down to 0
       if (this.faults.size > 0 && !this.isDiverting) {
-          rul_seconds = Math.min(rul_seconds, 65); // Plummet to ~1 minute
+          let maxAge = 0;
+          for (const age of this.faults.values()) {
+              if (age > maxAge) maxAge = age;
+          }
+          rul_seconds = Math.max(0, Math.min(rul_seconds, 65) - (maxAge * 3)); // Drop 3x faster so it crashes in ~20 seconds!
       }
     
     // Anti-spoofing check
