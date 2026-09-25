@@ -121,40 +121,19 @@ export function UavTwin() {
   // Live physics & propeller rotation loop
   const [physicsStyles, setPhysicsStyles] = useState({});
 
+  // 2. We can still try to rotate the propeller inside the Sketchfab model
   useEffect(() => {
     let angle = 0;
     let timer: number;
     const tick = () => {
       timer = requestAnimationFrame(tick);
-
-      // 1. Compute CSS shaking and banking for the entire iframe
+      
       const state = stateRef.current;
       const rpm = state?.sample.params.rpm ?? 0;
-      const vib = state?.trustedVibration ?? 0;
-      const t = performance.now() / 1000;
 
-      // Simulated banking based on some noise or telemetry
-      const bank = Math.sin(t * 0.5) * 2; // gentle roll
-      const pitch = Math.cos(t * 0.3) * 1; // gentle pitch
-
-      // High vibration = screen shake
-      const shakeAmt = Math.max(0, vib - 20) * 0.1;
-      const shakeX = (Math.random() - 0.5) * shakeAmt;
-      const shakeY = (Math.random() - 0.5) * shakeAmt;
-
-      setPhysicsStyles({
-        transform: `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`,
-        transition: "transform 0.05s ease-out",
-      });
-
-      // 2. Rotate the propeller inside the Sketchfab model
       if (!apiRef.current || !propIdRef.current) return;
       
-      // Calculate rotation based on live RPM
       angle += (rpm / 60) * 0.25;
-      
-      // Rotate around Z axis (forward/backward) which is standard for pusher props
-      // If it doesn't spin the right way, it means the node's local axis is different, but Z is most common.
       apiRef.current.rotate(propIdRef.current, [angle, 0, 0, 1], { duration: 0 });
     };
     timer = requestAnimationFrame(tick);
@@ -162,27 +141,19 @@ export function UavTwin() {
   }, []);
 
   return (
-    <div className="relative w-full h-full bg-[#101720] overflow-hidden" style={{ perspective: "1000px" }}>
-      {/* ── Sketchfab iframe (shifted up to hide chrome behind masks + live CSS physics) ── */}
+    <div className="relative w-full h-full bg-[#101720]">
+      {/* ── Sketchfab iframe (unclipped) ── */}
       <iframe
         ref={iframeRef}
         title="MQ-1C Gray Eagle"
         src=""
         allow="autoplay; fullscreen; xr-spatial-tracking"
         allowFullScreen
-        className="absolute border-0"
-        style={{
-          top: "-72px", left: "-5%", width: "110%", height: "calc(100% + 72px + 52px)",
-          ...physicsStyles
-        }}
+        className="absolute inset-0 w-full h-full border-0"
       />
 
-
-      {/* ── Chrome Masks ── */}
-      <div className="absolute top-0 left-0 right-0 h-[72px] bg-[#101720] z-10 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 right-0 h-[52px] bg-[#101720] z-10 pointer-events-none" />
-
       {/* ── Loading Overlay ── */}
+
       {!ready && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20">
           <div className="flex flex-col items-center gap-2 rounded-lg bg-black/60 px-6 py-4 backdrop-blur-sm">
