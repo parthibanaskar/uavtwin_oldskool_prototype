@@ -288,11 +288,27 @@ export class SimulatedTelemetrySource implements TelemetrySource {
       }
 
       if (this.isDiverting && (this.t - this.divertStartT) * 0.046 >= 4.0) {
-          this.faults.clear();
-          this.profile = "idle";
-          params.rpm = 0;
-          params.vibration = 0;
-      }
+            this.faults.clear();
+            this.profile = "idle";
+            params.rpm = 0;
+            params.vibration = 0;
+            params.fuelFlow = 0;
+            params.oilPressure = 0;
+            params.egt = 25;
+            params.busVoltage = 0;
+            params.cht = 25;
+            params.oilTemp = 25;
+        }
+        if (isCrashed) {
+            params.rpm = 0;
+            params.vibration = 0;
+            params.fuelFlow = 0;
+            params.oilPressure = 0;
+            params.egt = 25;
+            params.busVoltage = 0;
+            params.cht = 25;
+            params.oilTemp = 25;
+        }
       
       const sample: Sample = {
       t: this.t,
