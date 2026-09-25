@@ -77,40 +77,7 @@ export function ScenarioControls() {
       }
       bodyClassName={cn("space-y-2 p-3 transition-all", !expanded && "hidden")}
     >
-      <div className="flex flex-wrap items-center gap-2 mb-2 pb-2 border-b border-border/50">
-        <span className="label-xs">Flight phase</span>
-        {PROFILE_ORDER.map((p) => (
-          <button
-            key={p}
-            onClick={() => setProfile(p)}
-            className={cn(
-              "rounded-sm border px-2 py-1 font-mono text-[0.65rem] uppercase tracking-wider",
-              profile === p
-                ? "border-primary/60 bg-primary/15 text-primary"
-                : "border-border text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {FLIGHT_PROFILES[p].label}
-          </button>
-        ))}
-        
-        <span className="label-xs ml-4">Fly-By-Wire Throttle</span>
-        <input 
-          type="range" 
-          min="0" 
-          max="100" 
-          defaultValue="80"
-          onChange={(e) => setThrottle(parseFloat(e.target.value))}
-          className="w-24 accent-primary"
-        />
-        
-        <button
-          onClick={calibrate}
-          className="ml-auto inline-flex items-center gap-1 rounded-sm border border-primary/50 bg-primary/10 px-2 py-1 font-mono text-[0.65rem] uppercase tracking-wider text-primary hover:bg-primary/20"
-        >
-          CALIBRATE AI (ONLINE LEARNING)
-        </button>
-      </div>
+      
       <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3 xl:grid-cols-4">
         {SCENARIOS.map((s) => {
            const active = activeFaults.includes(s.key);
