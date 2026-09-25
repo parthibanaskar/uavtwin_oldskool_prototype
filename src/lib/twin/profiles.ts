@@ -140,16 +140,21 @@ export const FLIGHT_PROFILES: Record<FlightProfile, ProfileSpec> = {
     busVoltage: 27.6,
     cht: 128,
   }),
-  takeoff: makeProfile("Takeoff / Climb", "Max continuous power, high thermal load", 32, {
-    rpm: 7600,
-    egt: 742,
-    vibration: 4.4,
-    oilPressure: 4.9,
-    oilTemp: 112,
-    fuelFlow: 26.5,
-    busVoltage: 28.3,
-    cht: 214,
-  }),
+  takeoff: makeProfile(
+    "Takeoff / Climb",
+    "Max continuous power, high thermal load",
+    32,
+    {
+      rpm: 7600,
+      egt: 742,
+      vibration: 4.4,
+      oilPressure: 4.9,
+      oilTemp: 112,
+      fuelFlow: 26.5,
+      busVoltage: 28.3,
+      cht: 214,
+    },
+  ),
   cruise: makeProfile("Cruise", "Steady-state endurance leg", 26, {
     rpm: 6100,
     egt: 646,
@@ -160,26 +165,36 @@ export const FLIGHT_PROFILES: Record<FlightProfile, ProfileSpec> = {
     busVoltage: 28.1,
     cht: 182,
   }),
-  loiter: makeProfile("Loiter / ISR Orbit", "Low-power orbit over target area", 19, {
-    rpm: 4800,
-    egt: 566,
-    vibration: 2.3,
-    oilPressure: 3.8,
-    oilTemp: 88,
-    fuelFlow: 11.2,
-    busVoltage: 27.9,
-    cht: 158,
-  }),
-  descent: makeProfile("Descent / Approach", "Reduced power, cooling airflow high", 22, {
-    rpm: 3600,
-    egt: 486,
-    vibration: 2.0,
-    oilPressure: 3.4,
-    oilTemp: 80,
-    fuelFlow: 7.6,
-    busVoltage: 27.8,
-    cht: 140,
-  }),
+  loiter: makeProfile(
+    "Loiter / ISR Orbit",
+    "Low-power orbit over target area",
+    19,
+    {
+      rpm: 4800,
+      egt: 566,
+      vibration: 2.3,
+      oilPressure: 3.8,
+      oilTemp: 88,
+      fuelFlow: 11.2,
+      busVoltage: 27.9,
+      cht: 158,
+    },
+  ),
+  descent: makeProfile(
+    "Descent / Approach",
+    "Reduced power, cooling airflow high",
+    22,
+    {
+      rpm: 3600,
+      egt: 486,
+      vibration: 2.0,
+      oilPressure: 3.4,
+      oilTemp: 80,
+      fuelFlow: 7.6,
+      busVoltage: 27.8,
+      cht: 140,
+    },
+  ),
   shutdown: makeProfile("Engine Off", "Grounded, engine off", 0, {
     rpm: 0,
     egt: 25,
@@ -192,55 +207,60 @@ export const FLIGHT_PROFILES: Record<FlightProfile, ProfileSpec> = {
   }),
 };
 
-export const HOTSPOTS: Record<string, { label: string; subsystem: Subsystem }> = {
-  bearing: { label: "Main Bearing / Crank", subsystem: "vibration" },
-  propeller: { label: "Propeller & Hub", subsystem: "vibration" },
-  hotSection: { label: "Hot Section / Exhaust", subsystem: "engine" },
-  oilSystem: { label: "Oil Pump & Gallery", subsystem: "lubrication" },
-  fuelSystem: { label: "Fuel Pump & Lines", subsystem: "fuel" },
-  electrical: { label: "Generator & Bus", subsystem: "electrical" },
-  avionics: { label: "Nav / GNSS Bay", subsystem: "nav" },
-  cylinder: { label: "Cylinder Block", subsystem: "engine" },
-};
+export const HOTSPOTS: Record<string, { label: string; subsystem: Subsystem }> =
+  {
+    bearing: { label: "Main Bearing / Crank", subsystem: "vibration" },
+    propeller: { label: "Propeller & Hub", subsystem: "vibration" },
+    hotSection: { label: "Hot Section / Exhaust", subsystem: "engine" },
+    oilSystem: { label: "Oil Pump & Gallery", subsystem: "lubrication" },
+    fuelSystem: { label: "Fuel Pump & Lines", subsystem: "fuel" },
+    electrical: { label: "Generator & Bus", subsystem: "electrical" },
+    avionics: { label: "Nav / GNSS Bay", subsystem: "nav" },
+    cylinder: { label: "Cylinder Block", subsystem: "engine" },
+  };
 
 export const SCENARIOS: Scenario[] = [
-    {
-      key: "bearingWear",
-      label: "Main bearing wear",
-      subsystem: "vibration",
-      severity: "critical",
-      hotspot: "bearing",
-      rampSeconds: 2,
-      description: "Spalling on the main bearing race raises the BPFO band and oil temperature.",
-    },
-    {
-      key: "oilStarvation",
-      label: "Oil starvation",
-      subsystem: "lubrication",
-      severity: "critical",
-      hotspot: "oilSystem",
-      rampSeconds: 2,
-      description: "Oil pump wear or a gallery leak collapses pressure and spikes oil temperature.",
-    },
-    {
-      key: "fuelBlockage",
-      label: "Fuel line blockage",
-      subsystem: "fuel",
-      severity: "critical",
-      hotspot: "fuelFilter",
-      rampSeconds: 2,
-      description: "Primary fuel filter blockage forces fuel pressure drop and RPM sag.",
-    },
-    {
-      key: "gpsSpoof",
-      label: "GPS spoofing",
-      subsystem: "nav",
-      severity: "critical",
-      hotspot: "navSensor",
-      rampSeconds: 1,
-      description: "External interference introduces a 2km lateral bias to GNSS coordinates.",
-    }
-  ];
+  {
+    key: "bearingWear",
+    label: "Main bearing wear",
+    subsystem: "vibration",
+    severity: "critical",
+    hotspot: "bearing",
+    rampSeconds: 2,
+    description:
+      "Spalling on the main bearing race raises the BPFO band and oil temperature.",
+  },
+  {
+    key: "oilStarvation",
+    label: "Oil starvation",
+    subsystem: "lubrication",
+    severity: "critical",
+    hotspot: "oilSystem",
+    rampSeconds: 2,
+    description:
+      "Oil pump wear or a gallery leak collapses pressure and spikes oil temperature.",
+  },
+  {
+    key: "fuelBlockage",
+    label: "Fuel line blockage",
+    subsystem: "fuel",
+    severity: "critical",
+    hotspot: "fuelFilter",
+    rampSeconds: 2,
+    description:
+      "Primary fuel filter blockage forces fuel pressure drop and RPM sag.",
+  },
+  {
+    key: "gpsSpoof",
+    label: "GPS spoofing",
+    subsystem: "nav",
+    severity: "critical",
+    hotspot: "navSensor",
+    rampSeconds: 1,
+    description:
+      "External interference introduces a 2km lateral bias to GNSS coordinates.",
+  },
+];
 
 export const SCENARIO_BY_KEY: Record<string, Scenario> = Object.fromEntries(
   SCENARIOS.map((s) => [s.key, s]),

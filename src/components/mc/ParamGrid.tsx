@@ -18,25 +18,39 @@ export function ParamGrid() {
         const spec = PARAM_SPECS[key];
         const value = displayed?.sample.params[key];
         const dev = displayed?.deviations[key] ?? 0;
-        const tone = healthTone(Math.round(100 * (1 - Math.min(1, dev * 0.95))));
-        
+        const tone = healthTone(
+          Math.round(100 * (1 - Math.min(1, dev * 0.95))),
+        );
+
         // Only show history up to the cursor for accurate replays
-        const upToCursor = cursor !== null ? frames.slice(0, cursor + 1) : frames;
+        const upToCursor =
+          cursor !== null ? frames.slice(0, cursor + 1) : frames;
         const history = upToCursor.slice(-90).map((f) => f.sample.params[key]);
-        
+
         const pct =
-          value === undefined ? 0 : ((value - spec.min) / (spec.max - spec.min)) * 100;
+          value === undefined
+            ? 0
+            : ((value - spec.min) / (spec.max - spec.min)) * 100;
         return (
-          <div key={key} className="rounded-sm border border-border/70 bg-muted/20 p-2">
+          <div
+            key={key}
+            className="rounded-sm border border-border/70 bg-muted/20 p-2"
+          >
             <div className="flex items-baseline justify-between gap-1">
               <p className="label-xs truncate">{spec.label}</p>
               <span className={cn("font-mono text-[0.625rem]", toneText[tone])}>
-                {tone === "ok" ? "NOMINAL" : tone === "warn" ? "CAUTION" : "EXCEED"}
+                {tone === "ok"
+                  ? "NOMINAL"
+                  : tone === "warn"
+                    ? "CAUTION"
+                    : "EXCEED"}
               </span>
             </div>
             <p className="font-mono text-lg leading-tight font-semibold">
               {value === undefined ? "--" : value.toFixed(spec.decimals)}
-              <span className="ml-1 text-[0.65rem] text-muted-foreground">{spec.unit}</span>
+              <span className="ml-1 text-[0.65rem] text-muted-foreground">
+                {spec.unit}
+              </span>
             </p>
             <Sparkline values={history} tone={tone} height={22} />
             <Meter value={pct} tone={tone} />

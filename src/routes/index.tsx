@@ -48,29 +48,33 @@ export const Route = createFileRoute("/")({
 function TwinPanel() {
   const { focusHotspot, displayed, rul, sourceKind } = useMission();
   const hotspot = focusHotspot ? HOTSPOTS[focusHotspot] : null;
-  const value = hotspot ? (displayed?.health.subsystems[hotspot.subsystem] ?? 100) : null;
+  const value = hotspot
+    ? (displayed?.health.subsystems[hotspot.subsystem] ?? 100)
+    : null;
   const hotspotRul = hotspot ? (rul[hotspot.subsystem] ?? null) : null;
 
   return (
     <Panel
       title="UAV digital twin"
       subtitle="Click a hotspot for the subsystem drilldown"
-      right={<Chip tone="info">{sourceKind === "simulated" ? "PYTHON EDGE NODE" : "HARDWARE"}</Chip>}
+      right={
+        <Chip tone="info">
+          {sourceKind === "simulated" ? "PYTHON EDGE NODE" : "HARDWARE"}
+        </Chip>
+      }
       className="h-[26rem] shrink-0"
       bodyClassName="min-h-0 flex-1 p-0 relative"
     >
       <div className="absolute inset-0">
         <UavTwin />
       </div>
-
-
     </Panel>
   );
 }
 
 function FooterReplayBar() {
   const { frames, cursor, setCursor } = useMission();
-  
+
   return (
     <footer className="flex items-center gap-2 px-1 pb-1">
       <span className="label-xs shrink-0">Replay</span>
@@ -130,7 +134,6 @@ function MissionControl() {
             <AlertFeed className="flex-1 min-h-0" />
           </div>
         </div>
-
 
         <ScenarioControls />
 

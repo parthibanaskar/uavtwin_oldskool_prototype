@@ -10,7 +10,13 @@ import {
 } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { alertFromCandidate, derive, estimateRul, evaluateAlerts, type Derived } from "./analytics";
+import {
+  alertFromCandidate,
+  derive,
+  estimateRul,
+  evaluateAlerts,
+  type Derived,
+} from "./analytics";
 import { appendEntry } from "./blackbox";
 import { SCENARIO_BY_KEY } from "./profiles";
 import { HEAL_PLAYBOOK } from "./selfheal";
@@ -69,7 +75,7 @@ interface MissionApi extends MissionState {
   clearAllFaults: () => void;
   setPaused: (p: boolean) => void;
   setSpeed: (s: number) => void;
-  setCursor: (index: number | null) => void
+  setCursor: (index: number | null) => void;
   setFuelPath: (path: "primary" | "secondary") => void;
   setFocusHotspot: (hotspot: string | null) => void;
   selectAlert: (id: string | null) => void;
@@ -91,7 +97,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const chainQueue = useRef<Promise<void>>(Promise.resolve());
   const activeAlertKeys = useRef<Set<string>>(new Set());
   const alertCooldowns = useRef<Map<string, number>>(new Map());
-  const healthHistory = useRef<Record<string, { t: number; value: number }[]>>({});
+  const healthHistory = useRef<Record<string, { t: number; value: number }[]>>(
+    {},
+  );
   const snapshotQueue = useRef<
     { t: string; flight_profile: string; params: never; health: never }[]
   >([]);
@@ -108,22 +116,25 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [profile, setProfileState] = useState<FlightProfile>("cruise");
   const [paused, setPausedState] = useState(false);
   const [speed, setSpeedState] = useState(1);
-  const [fuelPath, setFuelPathState] = useState<"primary" | "secondary">("primary");
+  const [fuelPath, setFuelPathState] = useState<"primary" | "secondary">(
+    "primary",
+  );
   const [activeFaults, setActiveFaults] = useState<string[]>([]);
   const [navMode, setNavMode] = useState<"gnss" | "inertial">("gnss");
   const [isDiverted, setIsDiverted] = useState(false);
   const [focusHotspot, setFocusHotspot] = useState<string | null>(null);
   const [selectedAlertId, selectAlert] = useState<string | null>(null);
   const [resolvedAlerts, setResolvedAlerts] = useState<Set<string>>(new Set());
-  const [silentlyResolvedAlerts, setSilentlyResolvedAlerts] = useState<Set<string>>(new Set());
+  const [silentlyResolvedAlerts, setSilentlyResolvedAlerts] = useState<
+    Set<string>
+  >(new Set());
   const [rul, setRul] = useState<Partial<Record<Subsystem, number | null>>>({});
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-    // Auto-resolve critical alerts to show the mitigation UI popup automatically
+  // Auto-resolve critical alerts to show the mitigation UI popup automatically
   const resolvingRef = useRef(new Set<string>());
   useEffect(() => {
     if (paused) return;
-
   }, [alerts, resolvedAlerts, paused]);
 
   const log = useCallback((kind: string, payload: Record<string, unknown>) => {
@@ -156,7 +167,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       try {
         const { data } = await supabase
           .from("telemetry_sessions")
-          .insert({ mission_name: missionId, flight_profile: "cruise", synthetic: true })
+          .insert({
+            mission_name: missionId,
+            flight_profile: "cruise",
+            synthetic: true,
+          })
           .select("id")
           .single();
         if (!cancelled && data) {
@@ -176,7 +191,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const source = new HardwareTelemetrySource();
     sourceRef.current = source;
-    log("mission.start", { missionId, mode: "HARDWARE_IN_LOOP", source: "websocket-edge-v1" });
+    log("mission.start", {
+      missionId,
+      mode: "HARDWARE_IN_LOOP",
+      source: "websocket-edge-v1",
+    });
 
     source.start((sample) => {
       if (Date.now() < ignoreUntil.current) return; // IGNORE old frames from the backend immediately after reset
@@ -193,7 +212,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         healthHistory.current[sub] = list.slice(-90);
       }
       const nextRul: Partial<Record<Subsystem, number | null>> = {};
-      for (const sub of SUBSYSTEMS) nextRul[sub] = estimateRul(healthHistory.current[sub] ?? []);
+      for (const sub of SUBSYSTEMS)
+        nextRul[sub] = estimateRul(healthHistory.current[sub] ?? []);
       setRul(nextRul);
 
       // queue a downsampled snapshot roughly every 8 ticks
@@ -214,14 +234,14 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       for (const key of activeAlertKeys.current) {
         if (!newActiveKeys.has(key)) {
           activeAlertKeys.current.delete(key);
-          
+
           // Auto-resolve any alert that naturally clears (e.g., sensor returns to nominal, or landing mode suppresses it)
           // This ensures the AI automatically resolves minor statistical anomalies and UI doesn't show stale alerts.
           setAlerts((prev) => {
-            const target = prev.find(a => a.key === key);
+            const target = prev.find((a) => a.key === key);
             if (target) {
-              setResolvedAlerts(r => new Set(r).add(target.id));
-              setSilentlyResolvedAlerts(r => new Set(r).add(target.id));
+              setResolvedAlerts((r) => new Set(r).add(target.id));
+              setSilentlyResolvedAlerts((r) => new Set(r).add(target.id));
             }
             return prev;
           });
@@ -231,11 +251,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       const now = Date.now();
       for (const candidate of currentCandidates) {
         if (activeAlertKeys.current.has(candidate.key)) continue;
-        
+
         // Debounce: prevent rapid re-triggering of the exact same alert within 20 seconds
         const lastTriggered = alertCooldowns.current.get(candidate.key) || 0;
         if (now - lastTriggered < 20000) continue;
-        
+
         activeAlertKeys.current.add(candidate.key);
         alertCooldowns.current.set(candidate.key, now);
 
@@ -266,7 +286,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
               contributions: alert.contributions as never,
               narrative: alert.narrative,
             })
-            .then(() => undefined, () => undefined);
+            .then(
+              () => undefined,
+              () => undefined,
+            );
         }
 
         // --- self-healing playbook ---
@@ -281,12 +304,20 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             detail: step.detail,
           }));
           setHealActions((prev) => {
-            if (prev.some(a => a.triggerKey === candidate.key && a.status === "recommended")) {
+            if (
+              prev.some(
+                (a) =>
+                  a.triggerKey === candidate.key && a.status === "recommended",
+              )
+            ) {
               return prev;
             }
             return [...actions.reverse(), ...prev].slice(0, 40);
           });
-          log("selfheal.applied", { key: candidate.key, steps: plan.map((s) => s.action) });
+          log("selfheal.applied", {
+            key: candidate.key,
+            steps: plan.map((s) => s.action),
+          });
           if (sid) {
             void supabase
               .from("self_heal_actions")
@@ -299,7 +330,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                   detail: a.detail,
                 })),
               )
-              .then(() => undefined, () => undefined);
+              .then(
+                () => undefined,
+                () => undefined,
+              );
           }
         }
       }
@@ -316,12 +350,18 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const timer = setInterval(() => {
       const sid = sessionIdRef.current;
-      const batch = snapshotQueue.current.splice(0, snapshotQueue.current.length);
+      const batch = snapshotQueue.current.splice(
+        0,
+        snapshotQueue.current.length,
+      );
       if (!sid || batch.length === 0) return;
       void supabase
         .from("telemetry_snapshots")
         .insert(batch.map((row) => ({ session_id: sid, ...row })))
-        .then(() => undefined, () => undefined);
+        .then(
+          () => undefined,
+          () => undefined,
+        );
     }, 6000);
     return () => clearInterval(timer);
   }, []);
@@ -340,7 +380,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       sourceRef.current?.injectFault(key);
       setActiveFaults((prev) => (prev.includes(key) ? prev : [...prev, key]));
       const scenario = SCENARIO_BY_KEY[key];
-      log("fault.injected", { key, label: scenario?.label ?? key, groundTruth: true });
+      log("fault.injected", {
+        key,
+        label: scenario?.label ?? key,
+        groundTruth: true,
+      });
       const sid = sessionIdRef.current;
       if (sid && scenario) {
         void supabase
@@ -352,7 +396,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             subsystem: scenario.subsystem,
             severity: scenario.severity,
           })
-          .then(() => undefined, () => undefined);
+          .then(
+            () => undefined,
+            () => undefined,
+          );
       }
     },
     [log],
@@ -372,23 +419,29 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     log("mission.prescriptive.throttleReduce", {});
   }, [log]);
 
-  const setThrottle = useCallback((throttle: number) => {
-    if ('setThrottle' in (sourceRef.current as any)) {
-      (sourceRef.current as any).setThrottle(throttle);
-    }
-    log("mission.setThrottle", { throttle });
-  }, [log]);
+  const setThrottle = useCallback(
+    (throttle: number) => {
+      if ("setThrottle" in (sourceRef.current as any)) {
+        (sourceRef.current as any).setThrottle(throttle);
+      }
+      log("mission.setThrottle", { throttle });
+    },
+    [log],
+  );
 
-  const divert = useCallback((lat: number, lon: number) => {
-    setIsDiverted(true);
-    if ('divert' in (sourceRef.current as any)) {
-      (sourceRef.current as any).divert(lat, lon);
-    }
-    log("mission.divert", { lat, lon });
-  }, [log]);
+  const divert = useCallback(
+    (lat: number, lon: number) => {
+      setIsDiverted(true);
+      if ("divert" in (sourceRef.current as any)) {
+        (sourceRef.current as any).divert(lat, lon);
+      }
+      log("mission.divert", { lat, lon });
+    },
+    [log],
+  );
 
   const calibrate = useCallback(() => {
-    if ('calibrate' in (sourceRef.current as any)) {
+    if ("calibrate" in (sourceRef.current as any)) {
       (sourceRef.current as any).calibrate();
     }
     log("ai.calibrate", {});
@@ -396,7 +449,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
   const applyHealAction = useCallback((triggerKey: string) => {
     setHealActions((prev) =>
-      prev.map((a) => (a.triggerKey === triggerKey ? { ...a, status: "applied" } : a))
+      prev.map((a) =>
+        a.triggerKey === triggerKey ? { ...a, status: "applied" } : a,
+      ),
     );
   }, []);
 
@@ -410,7 +465,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     setFrames([]);
     setLive(null);
     setBlackbox([]);
-      chainRef.current = [];
+    chainRef.current = [];
     setCursor(null);
     setResolvedAlerts(new Set());
     setSilentlyResolvedAlerts(new Set());
@@ -451,7 +506,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           triggerKey: "safeLanding",
           action: `Safe-landing sequence to ${siteName}`,
           status: "applied",
-          detail: "Descent profile and approach path uploaded; power derated for glide reserve.",
+          detail:
+            "Descent profile and approach path uploaded; power derated for glide reserve.",
         },
         ...prev,
       ]);
@@ -507,7 +563,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     log,
   };
 
-  return <MissionContext.Provider value={value}>{children}</MissionContext.Provider>;
+  return (
+    <MissionContext.Provider value={value}>{children}</MissionContext.Provider>
+  );
 }
 
 export function useMission() {

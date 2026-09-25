@@ -1,6 +1,12 @@
 import { useEffect, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useGLTF, Environment, OrbitControls, Html, ContactShadows } from "@react-three/drei";
+import {
+  useGLTF,
+  Environment,
+  OrbitControls,
+  Html,
+  ContactShadows,
+} from "@react-three/drei";
 import * as THREE from "three";
 import { useMission } from "@/lib/twin/store";
 import { HOTSPOTS } from "@/lib/twin/profiles";
@@ -28,7 +34,13 @@ function healthTone(val: number) {
   return "nominal";
 }
 
-function DroneScene({ rpm, vibration, health, focusHotspot, setFocusHotspot }: any) {
+function DroneScene({
+  rpm,
+  vibration,
+  health,
+  focusHotspot,
+  setFocusHotspot,
+}: any) {
   const { scene } = useGLTF("/models/uav.glb");
   const droneRef = useRef<THREE.Group>(null);
   const propRef = useRef<THREE.Object3D | null>(null);
@@ -37,7 +49,11 @@ function DroneScene({ rpm, vibration, health, focusHotspot, setFocusHotspot }: a
   useEffect(() => {
     scene.traverse((child) => {
       const name = child.name.toLowerCase();
-      if (name.includes("prop") || name.includes("rotor") || name.includes("blade")) {
+      if (
+        name.includes("prop") ||
+        name.includes("rotor") ||
+        name.includes("blade")
+      ) {
         propRef.current = child;
       }
     });
@@ -46,41 +62,56 @@ function DroneScene({ rpm, vibration, health, focusHotspot, setFocusHotspot }: a
   useFrame((state, delta) => {
     // Spin propeller based on RPM
     if (propRef.current) {
-      propRef.current.rotation.z += (rpm / 60) * delta * 20; 
+      propRef.current.rotation.z += (rpm / 60) * delta * 20;
       propRef.current.rotation.x += (rpm / 60) * delta * 20; // Depending on local axis of the GLTF
     }
-    
+
     // Physics shaking & banking
     if (droneRef.current) {
       const t = state.clock.getElapsedTime();
       const bank = Math.sin(t * 0.5) * 0.05;
       const pitch = Math.cos(t * 0.3) * 0.02;
-      
+
       const shakeAmt = Math.max(0, vibration - 20) * 0.002;
       const shakeX = (Math.random() - 0.5) * shakeAmt;
       const shakeY = (Math.random() - 0.5) * shakeAmt;
       const shakeZ = (Math.random() - 0.5) * shakeAmt;
 
-      droneRef.current.rotation.z = THREE.MathUtils.lerp(droneRef.current.rotation.z, bank, 0.1);
-      droneRef.current.rotation.x = THREE.MathUtils.lerp(droneRef.current.rotation.x, pitch, 0.1);
-      
+      droneRef.current.rotation.z = THREE.MathUtils.lerp(
+        droneRef.current.rotation.z,
+        bank,
+        0.1,
+      );
+      droneRef.current.rotation.x = THREE.MathUtils.lerp(
+        droneRef.current.rotation.x,
+        pitch,
+        0.1,
+      );
+
       droneRef.current.position.set(shakeX, shakeY, shakeZ);
     }
   });
 
   return (
     <group ref={droneRef}>
-      <primitive object={scene} scale={1} position={[0,0,0]} />
+      <primitive object={scene} scale={1} position={[0, 0, 0]} />
       {/* Render native HTML hotspots mapped to 3D coords! */}
       {ANNOTATIONS.map(({ id, position }) => {
         const subsystem = HOTSPOTS[id]?.subsystem;
-        const val = subsystem && health ? (health.subsystems[subsystem] ?? 100) : 100;
+        const val =
+          subsystem && health ? (health.subsystems[subsystem] ?? 100) : 100;
         const tone = healthTone(val);
         const color = TONE_HEX[tone];
         const isActive = focusHotspot === id;
 
         return (
-          <Html key={id} position={position} center distanceFactor={15} zIndexRange={[100, 0]}>
+          <Html
+            key={id}
+            position={position}
+            center
+            distanceFactor={15}
+            zIndexRange={[100, 0]}
+          >
             <button
               className="pointer-events-auto flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all"
               style={{
@@ -88,11 +119,14 @@ function DroneScene({ rpm, vibration, health, focusHotspot, setFocusHotspot }: a
                 backgroundColor: isActive ? color + "99" : "#101720cc",
                 color: color,
                 boxShadow: isActive ? `0 0 12px ${color}` : "none",
-                whiteSpace: "nowrap"
+                whiteSpace: "nowrap",
               }}
               onClick={() => setFocusHotspot(isActive ? null : id)}
             >
-              <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+              <span
+                className="inline-block h-2 w-2 rounded-full"
+                style={{ backgroundColor: color }}
+              />
               {HOTSPOTS[id]?.label ?? id}
               <span className="opacity-70">{val}</span>
             </button>
@@ -121,17 +155,29 @@ export function UavTwin() {
         <ambientLight intensity={0.8} />
         <directionalLight position={[10, 10, 5]} intensity={2.5} />
         <Environment preset="city" />
-        
-        <DroneScene 
-          rpm={rpm} 
-          vibration={vibration} 
-          health={health} 
-          focusHotspot={focusHotspot} 
-          setFocusHotspot={setFocusHotspot} 
+
+        <DroneScene
+          rpm={rpm}
+          vibration={vibration}
+          health={health}
+          focusHotspot={focusHotspot}
+          setFocusHotspot={setFocusHotspot}
         />
-        
-        <OrbitControls makeDefault autoRotate autoRotateSpeed={0.5} enablePan={false} maxPolarAngle={Math.PI / 2 + 0.2} />
-        <ContactShadows position={[0, -2, 0]} opacity={0.4} scale={20} blur={2} far={4} />
+
+        <OrbitControls
+          makeDefault
+          autoRotate
+          autoRotateSpeed={0.5}
+          enablePan={false}
+          maxPolarAngle={Math.PI / 2 + 0.2}
+        />
+        <ContactShadows
+          position={[0, -2, 0]}
+          opacity={0.4}
+          scale={20}
+          blur={2}
+          far={4}
+        />
       </Canvas>
     </div>
   );

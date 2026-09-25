@@ -22,7 +22,11 @@ export function SpectrumPanel() {
         </Chip>
       }
     >
-      <svg viewBox={`0 0 100 ${H}`} preserveAspectRatio="none" className="h-[108px] w-full">
+      <svg
+        viewBox={`0 0 100 ${H}`}
+        preserveAspectRatio="none"
+        className="h-[108px] w-full"
+      >
         {[1, 3.57, 7.14].map((mult) => {
           const x = ((rotHz * mult) / 520) * 100;
           if (x > 100) return null;

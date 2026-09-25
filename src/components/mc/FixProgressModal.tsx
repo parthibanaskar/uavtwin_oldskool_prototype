@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Wrench, Zap, Activity, AlertTriangle, X, PlaneLanding } from "lucide-react";
+import {
+  CheckCircle2,
+  Wrench,
+  Zap,
+  Activity,
+  AlertTriangle,
+  X,
+  PlaneLanding,
+} from "lucide-react";
 import { useMission } from "@/lib/twin/store";
 import { cn } from "@/lib/utils";
 import { PARAM_SPECS, FLIGHT_PROFILES } from "@/lib/twin/profiles";
@@ -25,7 +33,10 @@ interface FixSession {
 }
 
 /** Build a rich real-time fix plan from the alert + current live telemetry */
-function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"]): FixStep[] {
+function buildFixPlan(
+  alert: Alert,
+  live: ReturnType<typeof useMission>["live"],
+): FixStep[] {
   const p = live?.sample?.params;
   const phys = live?.sample?.physics;
   const fmt = (v: number, decimals = 1) => v.toFixed(decimals);
@@ -53,7 +64,8 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
       {
         id: "bw3",
         label: "Raising accelerometer sampling rate to 4 Hz",
-        detail: "Finer BPFO trend resolution enabled. Edge controller will monitor for spall acceleration.",
+        detail:
+          "Finer BPFO trend resolution enabled. Edge controller will monitor for spall acceleration.",
         status: "pending",
       },
     ],
@@ -73,7 +85,9 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
         detail: `RPM surge to ${p ? fmt((p.rpm || 5000) * 1.08, 0) : "—"} RPM for 3 seconds to shed ice centrifugally from blade leading edges. RPM will return to cruise after shed.`,
         sensorKey: "rpm",
         sensorBefore: p ? `${fmt(p.rpm, 0)} RPM (dragged by ice)` : "—",
-        sensorAfter: p ? `${fmt((p.rpm || 5000) * 1.0, 0)} RPM (restored)` : "—",
+        sensorAfter: p
+          ? `${fmt((p.rpm || 5000) * 1.0, 0)} RPM (restored)`
+          : "—",
         status: "pending",
       },
     ],
@@ -110,7 +124,8 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
       {
         id: "fuel2",
         label: "Opening secondary fuel path & re-trimming governor",
-        detail: "Secondary delivery line bypasses the failed pump and restricted filter. ECU governor re-trimmed for backup path flow characteristics.",
+        detail:
+          "Secondary delivery line bypasses the failed pump and restricted filter. ECU governor re-trimmed for backup path flow characteristics.",
         status: "pending",
       },
     ],
@@ -121,7 +136,9 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
         detail: `EGT at ${p ? fmt(p.egt, 0) : "—"} °C (nominal ${FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.egt} °C). Richer mixture shifts combustion away from peak EGT, cooling turbine section by ~${p ? fmt((p.egt - FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.egt) * 0.6, 0) : "—"} °C.`,
         sensorKey: "egt",
         sensorBefore: p ? `${fmt(p.egt, 0)} °C` : "—",
-        sensorAfter: p ? `~${fmt(FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.egt + (p.egt - FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.egt) * 0.4, 0)} °C` : "—",
+        sensorAfter: p
+          ? `~${fmt(FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.egt + (p.egt - FLIGHT_PROFILES[live?.sample?.profile || "cruise"].nominal.egt) * 0.4, 0)} °C`
+          : "—",
         status: "pending",
       },
       {
@@ -158,7 +175,8 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
       {
         id: "bus2",
         label: "Transferring avionics to backup battery bus",
-        detail: "Flight computer and autopilot transferred to isolated 24V battery bus. Generator output drop no longer affects flight-critical systems.",
+        detail:
+          "Flight computer and autopilot transferred to isolated 24V battery bus. Generator output drop no longer affects flight-critical systems.",
         status: "pending",
       },
     ],
@@ -183,13 +201,15 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
       {
         id: "gps1",
         label: "Rejecting GNSS feed — switching to inertial navigation",
-        detail: "GNSS fix flagged as spoofed (signal anomaly confirmed by dual-antenna phase comparison). Navigation now relying on IMU dead reckoning + terrain elevation matching.",
+        detail:
+          "GNSS fix flagged as spoofed (signal anomaly confirmed by dual-antenna phase comparison). Navigation now relying on IMU dead reckoning + terrain elevation matching.",
         status: "pending",
       },
       {
         id: "gps2",
         label: "Freezing waypoint updates from satellite",
-        detail: "Autopilot waypoint buffer locked. Spoofed position data cannot redirect the aircraft. Ground Control Station notified via encrypted black-box entry.",
+        detail:
+          "Autopilot waypoint buffer locked. Spoofed position data cannot redirect the aircraft. Ground Control Station notified via encrypted black-box entry.",
         status: "pending",
       },
     ],
@@ -203,7 +223,8 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
       {
         id: "div2",
         label: "Commanding autonomous divert trajectory",
-        detail: "Flight director computing shortest-path intercept to VDSJ. Ailerons and rudder deploying for coordinated turn. Engine transitioning to descent profile.",
+        detail:
+          "Flight director computing shortest-path intercept to VDSJ. Ailerons and rudder deploying for coordinated turn. Engine transitioning to descent profile.",
         status: "pending",
       },
     ],
@@ -212,7 +233,7 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
   if (alert.key.startsWith("suddenShift_")) {
     const paramKey = alert.key.replace("suddenShift_", "");
     const val = p ? (p as any)[paramKey] : 0;
-    
+
     if (paramKey === "fuelFlow") {
       return [
         {
@@ -232,7 +253,7 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
         },
       ];
     }
-    
+
     return [
       {
         id: "ss_g1",
@@ -243,20 +264,23 @@ function buildFixPlan(alert: Alert, live: ReturnType<typeof useMission>["live"])
       {
         id: "ss_g2",
         label: "Isolating affected sensor bus & resetting edge model",
-        detail: "Switching to redundant sensor polling and clearing corrupted state from the physics-informed neural network.",
+        detail:
+          "Switching to redundant sensor polling and clearing corrupted state from the physics-informed neural network.",
         status: "pending",
-      }
+      },
     ];
   }
 
-  return plans[alert.key] ?? [
-    {
-      id: "generic1",
-      label: `Clearing ${alert.key} fault from edge controller`,
-      detail: `Subsystem: ${alert.subsystem}. Fault key "${alert.key}" will be purged from the active fault register. All physical actuator states will be restored to nominal.`,
-      status: "pending",
-    },
-  ];
+  return (
+    plans[alert.key] ?? [
+      {
+        id: "generic1",
+        label: `Clearing ${alert.key} fault from edge controller`,
+        detail: `Subsystem: ${alert.subsystem}. Fault key "${alert.key}" will be purged from the active fault register. All physical actuator states will be restored to nominal.`,
+        status: "pending",
+      },
+    ]
+  );
 }
 
 interface Props {
@@ -266,7 +290,9 @@ interface Props {
 
 function FixProgressPanel({ alert, onDone }: Props) {
   const { live, commandSafeLanding, divert } = useMission();
-  const [steps, setSteps] = useState<FixStep[]>(() => buildFixPlan(alert, live));
+  const [steps, setSteps] = useState<FixStep[]>(() =>
+    buildFixPlan(alert, live),
+  );
   const [currentStep, setCurrentStep] = useState(0);
   const [done, setDone] = useState(false);
   const [progress, setProgress] = useState(100); // countdown bar 100→0
@@ -274,12 +300,17 @@ function FixProgressPanel({ alert, onDone }: Props) {
   const AUTO_DISMISS_MS = 12000; // 12 seconds to read before auto-dismiss
 
   // Divert-type alerts that should show the big DIVERT button
-  const DIVERT_ALERTS = ["bearingPermanentDamage", "cascadingFailures", "prescriptiveDivert", "imminentCrash"];
+  const DIVERT_ALERTS = [
+    "bearingPermanentDamage",
+    "cascadingFailures",
+    "prescriptiveDivert",
+    "imminentCrash",
+  ];
   const isDivertAlert = DIVERT_ALERTS.includes(alert.key);
 
   // Nearest reachable divert site
   const lat = live?.sample?.gps?.lat ?? 28.6139;
-  const lon = live?.sample?.gps?.lon ?? 77.2090;
+  const lon = live?.sample?.gps?.lon ?? 77.209;
   const nearestSite = DIVERT_SITES.reduce((best, site) => {
     const d = haversineDistance(lat, lon, site.lat, site.lon);
     const bd = haversineDistance(lat, lon, best.lat, best.lon);
@@ -302,11 +333,15 @@ function FixProgressPanel({ alert, onDone }: Props) {
         return;
       }
 
-      setSteps(prev => prev.map((s, i) => i === index ? { ...s, status: "running" } : s));
+      setSteps((prev) =>
+        prev.map((s, i) => (i === index ? { ...s, status: "running" } : s)),
+      );
 
       const delay = 700 + Math.random() * 400;
       const timer = setTimeout(() => {
-        setSteps(prev => prev.map((s, i) => i === index ? { ...s, status: "done" } : s));
+        setSteps((prev) =>
+          prev.map((s, i) => (i === index ? { ...s, status: "done" } : s)),
+        );
         setCurrentStep(index + 1);
         runStep(index + 1);
       }, delay);
@@ -316,36 +351,52 @@ function FixProgressPanel({ alert, onDone }: Props) {
 
     const cleanup = runStep(0);
     return cleanup;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Countdown progress bar: only starts after all steps are done
   useEffect(() => {
     if (!done) return;
-    if (alert && ["prescriptiveDivert", "imminentCrash", "bearingPermanentDamage", "cascadingFailures", "bearingWear"].includes(alert.key)) {
+    if (
+      alert &&
+      [
+        "prescriptiveDivert",
+        "imminentCrash",
+        "bearingPermanentDamage",
+        "cascadingFailures",
+        "bearingWear",
+      ].includes(alert.key)
+    ) {
       return; // Wait for manual divert click
     }
     const interval = setInterval(() => {
-      setProgress(p => {
-        if (p <= 0) { clearInterval(interval); onDone(); return 0; }
-        return p - (100 / (AUTO_DISMISS_MS / 100));
+      setProgress((p) => {
+        if (p <= 0) {
+          clearInterval(interval);
+          onDone();
+          return 0;
+        }
+        return p - 100 / (AUTO_DISMISS_MS / 100);
       });
     }, 100);
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done, onDone, alert]);
 
-  const severityColor = alert.severity === "critical"
-    ? "border-red-500/50 text-red-400"
-    : alert.severity === "warning"
-    ? "border-orange-500/50 text-orange-400"
-    : "border-blue-500/50 text-blue-400";
+  const severityColor =
+    alert.severity === "critical"
+      ? "border-red-500/50 text-red-400"
+      : alert.severity === "warning"
+        ? "border-orange-500/50 text-orange-400"
+        : "border-blue-500/50 text-blue-400";
 
   return (
-    <div className={cn(
-      "rounded border bg-black/80 backdrop-blur-md p-4 shadow-2xl w-full max-w-lg",
-      severityColor
-    )}>
+    <div
+      className={cn(
+        "rounded border bg-black/80 backdrop-blur-md p-4 shadow-2xl w-full max-w-lg",
+        severityColor,
+      )}
+    >
       {/* Header */}
       <div className="flex items-start gap-2 mb-4 pb-3 border-b border-border/40">
         <Wrench className="size-4 mt-0.5 text-primary shrink-0 animate-pulse" />
@@ -355,7 +406,8 @@ function FixProgressPanel({ alert, onDone }: Props) {
           </p>
           <p className="text-sm font-bold text-white truncate">{alert.title}</p>
           <p className="text-[0.65rem] text-muted-foreground mt-0.5">
-            {steps.filter(s => s.status === "done").length} of {steps.length} actions complete
+            {steps.filter((s) => s.status === "done").length} of {steps.length}{" "}
+            actions complete
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -378,9 +430,11 @@ function FixProgressPanel({ alert, onDone }: Props) {
             key={step.id}
             className={cn(
               "rounded border p-3 transition-all duration-300",
-              step.status === "done" ? "border-green-500/30 bg-green-500/5" :
-              step.status === "running" ? "border-primary/50 bg-primary/5 shadow-[0_0_12px_rgba(99,102,241,0.15)]" :
-              "border-border/20 bg-muted/5 opacity-50"
+              step.status === "done"
+                ? "border-green-500/30 bg-green-500/5"
+                : step.status === "running"
+                  ? "border-primary/50 bg-primary/5 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
+                  : "border-border/20 bg-muted/5 opacity-50",
             )}
           >
             <div className="flex items-center gap-2 mb-1">
@@ -391,11 +445,16 @@ function FixProgressPanel({ alert, onDone }: Props) {
               ) : (
                 <div className="size-3.5 rounded-full border border-border/40 shrink-0" />
               )}
-              <span className={cn(
-                "text-xs font-semibold",
-                step.status === "done" ? "text-green-400" :
-                step.status === "running" ? "text-primary" : "text-muted-foreground"
-              )}>
+              <span
+                className={cn(
+                  "text-xs font-semibold",
+                  step.status === "done"
+                    ? "text-green-400"
+                    : step.status === "running"
+                      ? "text-primary"
+                      : "text-muted-foreground",
+                )}
+              >
                 {step.label}
               </span>
             </div>
@@ -406,15 +465,17 @@ function FixProgressPanel({ alert, onDone }: Props) {
             {(step.sensorBefore || step.sensorAfter) && (
               <div className="mt-2 ml-5 flex gap-4 font-mono text-[0.6rem]">
                 {step.sensorBefore && (
-                  <span className="text-red-400/80">
-                    ← {step.sensorBefore}
-                  </span>
+                  <span className="text-red-400/80">← {step.sensorBefore}</span>
                 )}
                 {step.sensorAfter && step.status !== "pending" && (
-                  <span className={cn(
-                    "transition-colors",
-                    step.status === "done" ? "text-green-400" : "text-muted-foreground"
-                  )}>
+                  <span
+                    className={cn(
+                      "transition-colors",
+                      step.status === "done"
+                        ? "text-green-400"
+                        : "text-muted-foreground",
+                    )}
+                  >
                     → {step.sensorAfter}
                   </span>
                 )}
@@ -431,8 +492,12 @@ function FixProgressPanel({ alert, onDone }: Props) {
             <div className="flex items-center gap-3 rounded bg-primary/10 border border-primary/30 px-4 py-3">
               <PlaneLanding className="size-5 text-primary shrink-0 animate-pulse" />
               <div>
-                <p className="text-xs font-bold text-primary">Diverting to {nearestSite.name}</p>
-                <p className="text-[0.65rem] text-muted-foreground mt-0.5">Landing sequence initiated — monitor Safe Landing Planner</p>
+                <p className="text-xs font-bold text-primary">
+                  Diverting to {nearestSite.name}
+                </p>
+                <p className="text-[0.65rem] text-muted-foreground mt-0.5">
+                  Landing sequence initiated — monitor Safe Landing Planner
+                </p>
               </div>
             </div>
           ) : (
@@ -446,7 +511,16 @@ function FixProgressPanel({ alert, onDone }: Props) {
               >
                 <PlaneLanding className="size-5" />
                 DIVERT NOW → {nearestSite.name}
-                <span className="text-xs font-normal opacity-80">({haversineDistance(lat, lon, nearestSite.lat, nearestSite.lon).toFixed(1)} km)</span>
+                <span className="text-xs font-normal opacity-80">
+                  (
+                  {haversineDistance(
+                    lat,
+                    lon,
+                    nearestSite.lat,
+                    nearestSite.lon,
+                  ).toFixed(1)}{" "}
+                  km)
+                </span>
               </button>
             </>
           )}
@@ -455,7 +529,9 @@ function FixProgressPanel({ alert, onDone }: Props) {
 
       {done && (
         <div className="mt-4 pt-3 border-t border-green-500/30">
-          <p className="text-xs font-bold text-green-400 text-center">✓ All fixes applied successfully</p>
+          <p className="text-xs font-bold text-green-400 text-center">
+            ✓ All fixes applied successfully
+          </p>
           <p className="text-[0.6rem] text-muted-foreground mt-0.5 text-center">
             Subsystem parameters returning to nominal. RUL recalculating.
           </p>
@@ -467,7 +543,8 @@ function FixProgressPanel({ alert, onDone }: Props) {
             />
           </div>
           <p className="text-[0.55rem] text-muted-foreground/50 mt-1 text-right">
-            Auto-dismissing — or press <span className="text-white/40">✕</span> to close
+            Auto-dismissing — or press <span className="text-white/40">✕</span>{" "}
+            to close
           </p>
         </div>
       )}
@@ -480,7 +557,8 @@ function FixProgressPanel({ alert, onDone }: Props) {
  * being fixed with real sensor before/after values when Execute Fixes is clicked.
  */
 export function FixProgressModal() {
-  const { alerts, resolvedAlerts, silentlyResolvedAlerts, isDiverted } = useMission();
+  const { alerts, resolvedAlerts, silentlyResolvedAlerts, isDiverted } =
+    useMission();
   const [fixQueue, setFixQueue] = useState<Alert[]>([]);
   const [shownIds] = useState(() => new Set<string>());
 
@@ -490,15 +568,22 @@ export function FixProgressModal() {
   // And DO NOT show it if we are already diverted!
   useEffect(() => {
     for (const a of alerts) {
-      const isCriticalHardwareOrDivert = ["bearingWear", "bearingPermanentDamage", "cascadingFailures", "prescriptiveDivert", "imminentCrash"].includes(a.key);
+      const isCriticalHardwareOrDivert = [
+        "bearingWear",
+        "bearingPermanentDamage",
+        "cascadingFailures",
+        "prescriptiveDivert",
+        "imminentCrash",
+      ].includes(a.key);
       if (
         !silentlyResolvedAlerts?.has(a.id) &&
-        !shownIds.has(a.id) && 
+        !shownIds.has(a.id) &&
         !isDiverted &&
-        (isCriticalHardwareOrDivert || (resolvedAlerts.has(a.id) && a.severity === "critical"))
+        (isCriticalHardwareOrDivert ||
+          (resolvedAlerts.has(a.id) && a.severity === "critical"))
       ) {
         shownIds.add(a.id);
-        setFixQueue(prev => [...prev, a]);
+        setFixQueue((prev) => [...prev, a]);
       }
     }
   }, [resolvedAlerts, silentlyResolvedAlerts, alerts, shownIds, isDiverted]);
@@ -513,7 +598,7 @@ export function FixProgressModal() {
         <FixProgressPanel
           key={current.id}
           alert={current}
-          onDone={() => setFixQueue(prev => prev.slice(1))}
+          onDone={() => setFixQueue((prev) => prev.slice(1))}
         />
       </div>
     </div>

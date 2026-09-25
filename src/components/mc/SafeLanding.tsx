@@ -2,53 +2,81 @@ import { useState } from "react";
 import { PlaneLanding } from "lucide-react";
 
 import { useMission } from "@/lib/twin/store";
-import { DIVERT_SITES, isReachable, minutesToDistance, haversineDistance, calculateBearing } from "@/lib/twin/selfheal";
+import {
+  DIVERT_SITES,
+  isReachable,
+  minutesToDistance,
+  haversineDistance,
+  calculateBearing,
+} from "@/lib/twin/selfheal";
 import { Chip, Panel } from "./primitives";
 import { cn } from "@/lib/utils";
 
 export function SafeLanding() {
   const { rul, commandSafeLanding, divert, navMode, displayed } = useMission();
-  
+
   // Calculate worst RUL from the heuristic linear regression
   let worstRul = Object.values(rul).reduce<number | null>(
-    (min, v) => (v === null || v === undefined ? min : min === null ? v : Math.min(min, v)),
+    (min, v) =>
+      v === null || v === undefined ? min : min === null ? v : Math.min(min, v),
     null,
   );
-  
+
   // Also factor in the PyTorch PINN physics engine RUL if it's available!
-  const pinnRul = typeof displayed?.sample.physics?.rul_seconds === "number" ? displayed.sample.physics.rul_seconds / 60.0 : null;
+  const pinnRul =
+    typeof displayed?.sample.physics?.rul_seconds === "number"
+      ? displayed.sample.physics.rul_seconds / 60.0
+      : null;
   if (pinnRul !== null) {
     worstRul = worstRul === null ? pinnRul : Math.min(worstRul, pinnRul);
   }
 
   const [pending, setPending] = useState<string | null>(null);
   const [committed, setCommitted] = useState<string | null>(null);
-  
+
   const currentLat = displayed?.sample.gps.lat ?? 28.6139;
-  const currentLon = displayed?.sample.gps.lon ?? 77.2090;
+  const currentLon = displayed?.sample.gps.lon ?? 77.209;
 
   if (displayed?.sample.physics?.crashed) {
     return (
-      <Panel title="Mission Terminated" subtitle="CATASTROPHIC FAILURE" bodyClassName="grid place-items-center p-6 text-center border-red-500/50 bg-red-950/20">
+      <Panel
+        title="Mission Terminated"
+        subtitle="CATASTROPHIC FAILURE"
+        bodyClassName="grid place-items-center p-6 text-center border-red-500/50 bg-red-950/20"
+      >
         <PlaneLanding className="size-8 text-red-500 mb-2 rotate-90" />
-        <h3 className="font-bold text-lg text-red-500 uppercase tracking-widest">AIRCRAFT CRASHED</h3>
-        <p className="text-xs text-muted-foreground mt-2">Unmitigated fatigue led to structural failure. The UAV has suffered a hull loss.</p>
+        <h3 className="font-bold text-lg text-red-500 uppercase tracking-widest">
+          AIRCRAFT CRASHED
+        </h3>
+        <p className="text-xs text-muted-foreground mt-2">
+          Unmitigated fatigue led to structural failure. The UAV has suffered a
+          hull loss.
+        </p>
       </Panel>
     );
   }
 
   if (displayed?.sample.physics?.landed) {
     return (
-      <Panel title="Safe landing planner" subtitle="Mission Terminated" bodyClassName="grid place-items-center p-6 text-center">
+      <Panel
+        title="Safe landing planner"
+        subtitle="Mission Terminated"
+        bodyClassName="grid place-items-center p-6 text-center"
+      >
         <PlaneLanding className="size-8 text-green-400 mb-2" />
-        <h3 className="font-bold text-lg text-green-400 uppercase tracking-widest">Landed & Grounded</h3>
-        <p className="text-xs text-muted-foreground mt-2">The UAV has successfully diverted and is safely grounded at the designated divert airbase.</p>
-          <button 
-            onClick={() => window.dispatchEvent(new Event('open-pfr'))}
-            className="mt-6 px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-green-500/30 transition-colors"
-          >
-            Open Post-Flight Review
-          </button>
+        <h3 className="font-bold text-lg text-green-400 uppercase tracking-widest">
+          Landed & Grounded
+        </h3>
+        <p className="text-xs text-muted-foreground mt-2">
+          The UAV has successfully diverted and is safely grounded at the
+          designated divert airbase.
+        </p>
+        <button
+          onClick={() => window.dispatchEvent(new Event("open-pfr"))}
+          className="mt-6 px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-sm text-xs font-mono uppercase tracking-widest hover:bg-green-500/30 transition-colors"
+        >
+          Open Post-Flight Review
+        </button>
       </Panel>
     );
   }
@@ -61,19 +89,31 @@ export function SafeLanding() {
           ? "No degradation trend · all fields reachable"
           : `Worst remaining life ${worstRul > 120 ? (worstRul / 60).toFixed(1) + " hours" : worstRul.toFixed(0) + " min"}`
       }
-      right={<Chip tone={navMode === "gnss" ? "ok" : "warn"}>NAV {navMode}</Chip>}
+      right={
+        <Chip tone={navMode === "gnss" ? "ok" : "warn"}>NAV {navMode}</Chip>
+      }
       bodyClassName="space-y-2 p-3"
     >
       <div className="relative mx-auto aspect-square w-full max-w-[190px] rounded-full border border-border/70 bg-muted/15">
         <div className="absolute inset-[22%] rounded-full border border-border/50" />
         <div className="absolute inset-[44%] rounded-full border border-border/40" />
         <div className="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.8)] animate-pulse z-10" />
-        
+
         <svg className="absolute inset-0 size-full pointer-events-none">
           {DIVERT_SITES.map((site) => {
             if (committed !== site.id) return null;
-            const distKm = haversineDistance(currentLat, currentLon, site.lat, site.lon);
-            const bearing = calculateBearing(currentLat, currentLon, site.lat, site.lon);
+            const distKm = haversineDistance(
+              currentLat,
+              currentLon,
+              site.lat,
+              site.lon,
+            );
+            const bearing = calculateBearing(
+              currentLat,
+              currentLon,
+              site.lat,
+              site.lon,
+            );
             const r = Math.min(0.46, (distKm / 100) * 0.46);
             const rad = ((bearing - 90) * Math.PI) / 180;
             return (
@@ -91,8 +131,18 @@ export function SafeLanding() {
         </svg>
 
         {DIVERT_SITES.map((site) => {
-          const distKm = haversineDistance(currentLat, currentLon, site.lat, site.lon);
-          const bearing = calculateBearing(currentLat, currentLon, site.lat, site.lon);
+          const distKm = haversineDistance(
+            currentLat,
+            currentLon,
+            site.lat,
+            site.lon,
+          );
+          const bearing = calculateBearing(
+            currentLat,
+            currentLon,
+            site.lat,
+            site.lon,
+          );
           const r = Math.min(0.46, (distKm / 100) * 0.46); // 100km radar radius
           const rad = ((bearing - 90) * Math.PI) / 180;
           const ok = isReachable(distKm, worstRul);
@@ -117,7 +167,12 @@ export function SafeLanding() {
 
       <div className="space-y-1">
         {DIVERT_SITES.map((site) => {
-          const distKm = haversineDistance(currentLat, currentLon, site.lat, site.lon);
+          const distKm = haversineDistance(
+            currentLat,
+            currentLon,
+            site.lat,
+            site.lon,
+          );
           const ok = isReachable(distKm, worstRul);
           return (
             <button
@@ -134,7 +189,9 @@ export function SafeLanding() {
               }}
               className={cn(
                 "w-full rounded-sm border p-2 text-left transition-colors",
-                ok ? "border-border/50 hover:bg-muted/30" : "border-crit/30 bg-crit/10 hover:border-crit/50",
+                ok
+                  ? "border-border/50 hover:bg-muted/30"
+                  : "border-crit/30 bg-crit/10 hover:border-crit/50",
                 committed === site.id && "border-primary bg-primary/10",
               )}
             >
@@ -156,8 +213,16 @@ export function SafeLanding() {
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-mono">{distKm.toFixed(1)} km</p>
-                  <p className={cn("text-[0.65rem]", ok ? "text-muted-foreground" : "text-crit font-bold")}>
-                    ETA {minutesToDistance(distKm) > 120 ? (minutesToDistance(distKm) / 60).toFixed(1) + "h" : minutesToDistance(distKm).toFixed(0) + "m"}
+                  <p
+                    className={cn(
+                      "text-[0.65rem]",
+                      ok ? "text-muted-foreground" : "text-crit font-bold",
+                    )}
+                  >
+                    ETA{" "}
+                    {minutesToDistance(distKm) > 120
+                      ? (minutesToDistance(distKm) / 60).toFixed(1) + "h"
+                      : minutesToDistance(distKm).toFixed(0) + "m"}
                   </p>
                 </div>
               </div>
@@ -178,12 +243,15 @@ export function SafeLanding() {
           <div className="panel-surface w-full max-w-sm space-y-3 p-4">
             <div className="flex items-center gap-2">
               <PlaneLanding className="size-4 text-primary" />
-              <h3 className="text-sm font-semibold">Confirm safe-landing sequence</h3>
+              <h3 className="text-sm font-semibold">
+                Confirm safe-landing sequence
+              </h3>
             </div>
             <p className="text-xs text-muted-foreground">
-              {DIVERT_SITES.find((s) => s.id === pending)?.name} will be uploaded as the active
-              divert field. Power is derated for glide reserve and the command is written to the
-              tamper-evident black box.
+              {DIVERT_SITES.find((s) => s.id === pending)?.name} will be
+              uploaded as the active divert field. Power is derated for glide
+              reserve and the command is written to the tamper-evident black
+              box.
             </p>
             <div className="flex justify-end gap-2">
               <button

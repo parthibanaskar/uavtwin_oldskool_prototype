@@ -67,6 +67,7 @@ export function bandEnergy(
   hiHz: number,
 ): number {
   let sum = 0;
-  for (const b of bins) if (b.freq >= loHz && b.freq <= hiHz) sum += b.mag * b.mag;
+  for (const b of bins)
+    if (b.freq >= loHz && b.freq <= hiHz) sum += b.mag * b.mag;
   return Math.sqrt(sum);
 }

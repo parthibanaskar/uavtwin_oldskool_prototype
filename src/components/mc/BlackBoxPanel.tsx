@@ -18,7 +18,9 @@ export function BlackBoxPanel() {
   };
 
   const exportLog = () => {
-    const blob = new Blob([JSON.stringify(blackbox, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(blackbox, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -27,7 +29,9 @@ export function BlackBoxPanel() {
     URL.revokeObjectURL(url);
   };
 
-  const visibleLogs = showAll ? [...blackbox].reverse() : [...blackbox].reverse().slice(0, 10);
+  const visibleLogs = showAll
+    ? [...blackbox].reverse()
+    : [...blackbox].reverse().slice(0, 10);
 
   return (
     <Panel
@@ -42,7 +46,9 @@ export function BlackBoxPanel() {
               ) : (
                 <ShieldX className="size-3" />
               )}
-              {result.ok ? `${result.checked} verified` : `broken @ ${result.brokenAt}`}
+              {result.ok
+                ? `${result.checked} verified`
+                : `broken @ ${result.brokenAt}`}
             </Chip>
           ) : null}
           <button
@@ -71,7 +77,9 @@ export function BlackBoxPanel() {
               <td className="py-1 pr-2 break-all text-muted-foreground">
                 {JSON.stringify(e.payload).slice(0, 70)}
               </td>
-              <td className="py-1 text-right text-muted-foreground">{e.hash.slice(0, 10)}…</td>
+              <td className="py-1 text-right text-muted-foreground">
+                {e.hash.slice(0, 10)}…
+              </td>
             </tr>
           ))}
         </tbody>

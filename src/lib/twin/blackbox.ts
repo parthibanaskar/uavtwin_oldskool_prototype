@@ -3,7 +3,9 @@ import type { BlackBoxEntry } from "./types";
 export const GENESIS_HASH = "0".repeat(64);
 
 function toHex(buffer: ArrayBuffer) {
-  return [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return [...new Uint8Array(buffer)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 /** SHA-256 over seq + timestamp + kind + payload + previous hash. */
@@ -18,7 +20,10 @@ export async function hashEntry(
     payload: overridePayload ?? entry.payload,
     prevHash: entry.prevHash,
   });
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(body),
+  );
   return toHex(digest);
 }
 
@@ -44,7 +49,9 @@ export interface VerifyResult {
   checked: number;
 }
 
-export async function verifyChain(chain: BlackBoxEntry[]): Promise<VerifyResult> {
+export async function verifyChain(
+  chain: BlackBoxEntry[],
+): Promise<VerifyResult> {
   let expectedPrev = GENESIS_HASH;
   for (const entry of chain) {
     const recomputed = await hashEntry(entry);

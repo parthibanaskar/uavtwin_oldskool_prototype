@@ -4,12 +4,27 @@ import { PARAM_SPECS } from "@/lib/twin/profiles";
 import type { ParamKey } from "@/lib/twin/types";
 
 export function MasterAlarmBanner() {
-  const { alerts, resolvedAlerts, setResolvedAlerts, live, clearFault, reduceThrottle, setFuelPath, commandSafeLanding, applyHealAction, divert } = useMission();
+  const {
+    alerts,
+    resolvedAlerts,
+    setResolvedAlerts,
+    live,
+    clearFault,
+    reduceThrottle,
+    setFuelPath,
+    commandSafeLanding,
+    applyHealAction,
+    divert,
+  } = useMission();
 
   // Find the highest severity active alert (critical or warning only)
-  const activeAlerts = alerts.filter((a) => !resolvedAlerts.has(a.id) && (a.severity === "critical" || a.severity === "warning"));
+  const activeAlerts = alerts.filter(
+    (a) =>
+      !resolvedAlerts.has(a.id) &&
+      (a.severity === "critical" || a.severity === "warning"),
+  );
   const hasCritical = activeAlerts.some((a) => a.severity === "critical");
-  
+
   // Find the most severe alert to show in the banner
   const topAlert = [...activeAlerts].sort((a, b) => {
     const rank = { critical: 3, warning: 2, advisory: 1, nominal: 0 };
@@ -29,7 +44,7 @@ export function MasterAlarmBanner() {
   }
 
   const handleFixAll = () => {
-    activeAlerts.forEach(a => {
+    activeAlerts.forEach((a) => {
       const clears: Record<string, string[]> = {
         propImbalance: ["propImbalance"],
         oilPressureDrop: ["oilStarvation"],
@@ -41,26 +56,45 @@ export function MasterAlarmBanner() {
         icingLoad: ["icing"],
         hiddenRedundancy: ["sensorDrift", "vibSensorFail"],
       };
-      
-      const toClear = clears[a.key] || [a.key];
-      const hasPhysicalFaults = activeAlerts.some(a => !["prescriptiveDivert", "imminentCrash", "prescriptiveThrottle", "landingApproach", "landingGears", "landingFlare", "landingTouchdown", "crashDetected", "cascadingFailures", "bearingPermanentDamage"].includes(a.key));
 
-      if (a.key === "prescriptiveDivert" || a.key === "imminentCrash" || a.key === "cascadingFailures" || a.key === "bearingPermanentDamage") {
+      const toClear = clears[a.key] || [a.key];
+      const hasPhysicalFaults = activeAlerts.some(
+        (a) =>
+          ![
+            "prescriptiveDivert",
+            "imminentCrash",
+            "prescriptiveThrottle",
+            "landingApproach",
+            "landingGears",
+            "landingFlare",
+            "landingTouchdown",
+            "crashDetected",
+            "cascadingFailures",
+            "bearingPermanentDamage",
+          ].includes(a.key),
+      );
+
+      if (
+        a.key === "prescriptiveDivert" ||
+        a.key === "imminentCrash" ||
+        a.key === "cascadingFailures" ||
+        a.key === "bearingPermanentDamage"
+      ) {
         if (!hasPhysicalFaults) {
           commandSafeLanding("Safdarjung Airport (VDSJ)");
-          divert(28.58, 77.20);
+          divert(28.58, 77.2);
         }
       } else if (a.key === "prescriptiveThrottle") {
         reduceThrottle();
       } else if (a.key === "fuelDelivery") {
         setFuelPath("secondary");
-        toClear.forEach(c => clearFault(c));
+        toClear.forEach((c) => clearFault(c));
       } else if (a.key === "gpsSpoof") {
-        toClear.forEach(c => clearFault(c));
+        toClear.forEach((c) => clearFault(c));
       } else {
-        toClear.forEach(c => clearFault(c));
+        toClear.forEach((c) => clearFault(c));
       }
-      
+
       setResolvedAlerts((prev) => new Set(prev).add(a.id));
       applyHealAction(a.key);
     });
@@ -77,9 +111,7 @@ export function MasterAlarmBanner() {
           }`}
         >
           <TriangleAlert className="size-4 shrink-0 animate-pulse" />
-          <span className="truncate">
-            MASTER CAUTION: {topAlert.title}
-          </span>
+          <span className="truncate">MASTER CAUTION: {topAlert.title}</span>
           <div className="ml-auto flex items-center gap-3">
             <span className="text-[0.65rem] text-muted-foreground mt-0.5">
               {activeAlerts.length} ACTIVE ANOMALIES
@@ -97,10 +129,16 @@ export function MasterAlarmBanner() {
       {activeDeviations.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-sm border border-yellow-500/30 bg-yellow-500/10 px-3 py-1.5 text-xs text-yellow-500">
           <AlertTriangle className="size-3 shrink-0" />
-          <span className="font-semibold uppercase tracking-wider mr-1">Abnormal Physical Symptoms:</span>
+          <span className="font-semibold uppercase tracking-wider mr-1">
+            Abnormal Physical Symptoms:
+          </span>
           {activeDeviations.map((d) => (
-            <span key={d.key} className="rounded-sm bg-yellow-500/20 px-1.5 py-0.5 font-mono">
-              {PARAM_SPECS[d.key].label} ({(d.dev * 100).toFixed(0)}% tolerance limit)
+            <span
+              key={d.key}
+              className="rounded-sm bg-yellow-500/20 px-1.5 py-0.5 font-mono"
+            >
+              {PARAM_SPECS[d.key].label} ({(d.dev * 100).toFixed(0)}% tolerance
+              limit)
             </span>
           ))}
         </div>
@@ -108,4 +146,3 @@ export function MasterAlarmBanner() {
     </div>
   );
 }
-

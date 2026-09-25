@@ -110,21 +110,44 @@ export function Sparkline({
       return `${x.toFixed(2)},${y.toFixed(2)}`;
     })
     .join(" ");
-  const stroke = { ok: "var(--ok)", warn: "var(--warn)", crit: "var(--crit)", info: "var(--primary)" }[
-    tone
-  ];
+  const stroke = {
+    ok: "var(--ok)",
+    warn: "var(--warn)",
+    crit: "var(--crit)",
+    info: "var(--primary)",
+  }[tone];
   return (
-    <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" className="w-full" style={{ height }}>
-      <polyline points={points} fill="none" stroke={stroke} strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+    <svg
+      viewBox={`0 0 100 ${height}`}
+      preserveAspectRatio="none"
+      className="w-full"
+      style={{ height }}
+    >
+      <polyline
+        points={points}
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.4"
+        vectorEffect="non-scaling-stroke"
+      />
     </svg>
   );
 }
 
-export function Meter({ value, tone }: { value: number; tone: "ok" | "warn" | "crit" | "info" }) {
+export function Meter({
+  value,
+  tone,
+}: {
+  value: number;
+  tone: "ok" | "warn" | "crit" | "info";
+}) {
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
       <div
-        className={cn("h-full rounded-full transition-[width] duration-500", toneBg[tone])}
+        className={cn(
+          "h-full rounded-full transition-[width] duration-500",
+          toneBg[tone],
+        )}
         style={{ width: `${Math.max(2, Math.min(100, value))}%` }}
       />
     </div>

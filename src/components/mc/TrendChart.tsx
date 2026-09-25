@@ -6,15 +6,26 @@ import { PARAM_KEYS, type ParamKey } from "@/lib/twin/types";
 import { Panel } from "./primitives";
 import { cn } from "@/lib/utils";
 
-const COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-4)", "var(--chart-5)"];
+const COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
 export function TrendChart() {
   const { frames, cursor } = useMission();
-  const [selected, setSelected] = useState<ParamKey[]>(["vibration", "egt", "oilPressure"]);
+  const [selected, setSelected] = useState<ParamKey[]>([
+    "vibration",
+    "egt",
+    "oilPressure",
+  ]);
 
   const toggle = (key: ParamKey) =>
     setSelected((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev.slice(-3), key],
+      prev.includes(key)
+        ? prev.filter((k) => k !== key)
+        : [...prev.slice(-3), key],
     );
 
   // If in replay mode, we must only plot up to the cursor so the graph correctly rewinds!
@@ -45,7 +56,11 @@ export function TrendChart() {
         </div>
       }
     >
-      <svg viewBox={`0 0 100 ${H}`} preserveAspectRatio="none" className="h-[120px] w-full">
+      <svg
+        viewBox={`0 0 100 ${H}`}
+        preserveAspectRatio="none"
+        className="h-[120px] w-full"
+      >
         {[0.25, 0.5, 0.75].map((g) => (
           <line
             key={g}
@@ -86,7 +101,10 @@ export function TrendChart() {
       </svg>
       <div className="mt-1 flex flex-wrap gap-3">
         {selected.map((key, idx) => (
-          <span key={key} className="flex items-center gap-1 font-mono text-[0.65rem]">
+          <span
+            key={key}
+            className="flex items-center gap-1 font-mono text-[0.65rem]"
+          >
             <span
               className="inline-block h-0.5 w-4"
               style={{ backgroundColor: COLORS[idx % COLORS.length] }}

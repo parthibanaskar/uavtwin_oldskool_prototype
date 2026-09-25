@@ -96,7 +96,6 @@
   --chart-5: oklch(0.75 0.14 300);
 }
 
-
 @layer base {
   * {
     border-color: var(--color-border);
@@ -107,8 +106,16 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--grid) 45%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--grid) 45%, transparent) 1px, transparent 1px);
+      linear-gradient(
+        to right,
+        color-mix(in oklab, var(--grid) 45%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklab, var(--grid) 45%, transparent) 1px,
+        transparent 1px
+      );
     background-size: 46px 46px;
   }
 
@@ -135,4 +142,3 @@
   text-transform: uppercase;
   color: var(--muted-foreground);
 }
-

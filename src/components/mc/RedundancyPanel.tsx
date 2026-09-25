@@ -45,8 +45,12 @@ export function RedundancyPanel() {
           GNSS split {(displayed?.gpsErrorMetres ?? 0).toFixed(0)} m
         </Chip>
         <Chip tone="info">Sats {displayed?.sample.gpsSats ?? "--"}</Chip>
-        <Chip tone={fuelPath === "primary" ? "ok" : "warn"}>Fuel path {fuelPath}</Chip>
-        <Chip tone="info">Trusted vib {(displayed?.trustedVibration ?? 0).toFixed(2)} mm/s</Chip>
+        <Chip tone={fuelPath === "primary" ? "ok" : "warn"}>
+          Fuel path {fuelPath}
+        </Chip>
+        <Chip tone="info">
+          Trusted vib {(displayed?.trustedVibration ?? 0).toFixed(2)} mm/s
+        </Chip>
       </div>
     </Panel>
   );

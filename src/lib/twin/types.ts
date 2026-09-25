@@ -19,7 +19,8 @@ export const PARAM_KEYS: ParamKey[] = [
   "cht",
 ];
 
-export type Subsystem = "engine" | "vibration" | "lubrication" | "fuel" | "electrical" | "nav";
+export type Subsystem =
+  "engine" | "vibration" | "lubrication" | "fuel" | "electrical" | "nav";
 
 export const SUBSYSTEMS: Subsystem[] = [
   "engine",
@@ -30,7 +31,8 @@ export const SUBSYSTEMS: Subsystem[] = [
   "nav",
 ];
 
-export type FlightProfile = "idle" | "takeoff" | "cruise" | "loiter" | "descent" | "shutdown";
+export type FlightProfile =
+  "idle" | "takeoff" | "cruise" | "loiter" | "descent" | "shutdown";
 
 export type Severity = "nominal" | "advisory" | "warning" | "critical";
 

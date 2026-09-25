@@ -8,11 +8,13 @@ attached; swap in real drivers without touching node logic.
 ## What's real vs. what you must supply
 
 **Real / correct as shipped:**
+
 - Package layout, `CMakeLists.txt`, `package.xml` — standard ROS 2 Humble/Jazzy ament_cmake structure.
 - `px4_msgs` usage (`VehicleStatus`, `VehicleLocalPosition`) — real PX4 ROS 2 message types, real topic names (`/fmu/out/...`), matching PX4's documented uXRCE-DDS bridge: https://docs.px4.io/main/en/ros2/user_guide.html
 - The hardware-abstraction seam (`ISensorBackend`) — this is the actual architecture decision needed to answer "SPI or I2C or CAN?" from before: **that decision lives in a new backend class, not in the ROS node.**
 
 **You must supply before this flies:**
+
 1. **A real `ISensorBackend` implementation** for your chosen AE sensor's ADC and your ECU's CAN/DroneCAN interface. The `MockSensorBackend` in `sensor_sampler_node.cpp` shows exactly where this plugs in.
 2. **`px4_msgs`** built in your workspace, version-matched to your PX4 firmware (`git clone https://github.com/PX4/px4_msgs` on the branch matching your PX4 version).
 3. **The `MicroXRCEAgent`** running (bridges PX4's internal uORB topics to ROS 2 DDS) — install per PX4's ROS 2 user guide.
@@ -34,6 +36,7 @@ The `EngineTelemetry.msg` fields intentionally match the `FEATURES` list
 in `train_physics_pinn.py`. The missing piece (not included here, since
 it depends on your chosen inference runtime) is a `rul_inference_node`
 that:
+
 1. Subscribes to `engine/telemetry`,
 2. Runs the saved `physics_pinn.pt` (via LibTorch C++, or a Python
    rclpy node if C++ deployment isn't required for your demo),
