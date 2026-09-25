@@ -44,24 +44,26 @@ function Airframe({ rpm, vibration }: { rpm: number; vibration: number }) {
     <group ref={body} scale={[0.8, 0.8, 0.8]} position={[0, 0, 0.6]}>
       {/* Main Fuselage */}
       <mesh material={bodyMat} position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
-        <capsuleGeometry args={[0.35, 3.5, 16, 16]} />
+        <cylinderGeometry args={[0.3, 0.2, 4.5, 32]} />
       </mesh>
       
-      {/* Bulbous Nose (Top/Front) */}
-      <mesh material={bodyMat} position={[0, 0.15, 1.5]}>
-        <sphereGeometry args={[0.4, 32, 16]} />
-      </mesh>
-      <mesh material={bodyMat} position={[0, 0.075, 1.6]} rotation={[Math.PI/2, 0, 0]}>
-        <cylinderGeometry args={[0.3, 0.4, 0.8, 16]} />
+      {/* MQ-1C Bulbous Head (Stretched Sphere) */}
+      <mesh material={bodyMat} position={[0, 0.15, 1.8]} scale={[1.1, 1.4, 3.2]}>
+        <sphereGeometry args={[0.3, 32, 32]} />
       </mesh>
 
-      {/* Belly Radome (Bottom/Middle) */}
-      <mesh material={bodyMat} position={[0, -0.3, 0.3]}>
-        <sphereGeometry args={[0.45, 32, 16]} />
+      {/* Nose cone rounding */}
+      <mesh material={bodyMat} position={[0, 0, 2.25]} scale={[1, 0.8, 1.5]}>
+        <sphereGeometry args={[0.3, 32, 32]} />
+      </mesh>
+
+      {/* Belly Radome (Flattened Stretched Sphere) */}
+      <mesh material={bodyMat} position={[0, -0.25, 0.5]} scale={[1.2, 0.6, 2.5]}>
+        <sphereGeometry args={[0.35, 32, 32]} />
       </mesh>
 
       {/* Sensor Turret (Chin) */}
-      <group position={[0, -0.3, 1.4]}>
+      <group position={[0, -0.3, 1.5]}>
         <mesh material={darkMat} position={[0, 0, 0]}>
           <cylinderGeometry args={[0.15, 0.15, 0.2, 16]} />
         </mesh>
@@ -71,65 +73,80 @@ function Airframe({ rpm, vibration }: { rpm: number; vibration: number }) {
       </group>
 
       {/* Wings */}
-      <mesh material={bodyMat} position={[0, 0.15, -0.2]}>
-        <boxGeometry args={[9.0, 0.06, 0.7]} />
+      <mesh material={bodyMat} position={[0, 0.1, -0.1]}>
+        <boxGeometry args={[11.0, 0.05, 0.6]} />
       </mesh>
 
-      {/* V-Tail (Upwards) */}
-      <mesh material={bodyMat} position={[0.4, 0.4, -1.8]} rotation={[0, 0, Math.PI/4]}>
-        <boxGeometry args={[1.5, 0.05, 0.5]} />
+      {/* Inverted V-Tail (MQ-1C points DOWN, unlike Hermes which points UP) */}
+      <mesh material={bodyMat} position={[0.4, -0.5, -2.0]} rotation={[0, 0, Math.PI/4]}>
+        <boxGeometry args={[1.6, 0.04, 0.5]} />
       </mesh>
-      <mesh material={bodyMat} position={[-0.4, 0.4, -1.8]} rotation={[0, 0, -Math.PI/4]}>
-        <boxGeometry args={[1.5, 0.05, 0.5]} />
+      <mesh material={bodyMat} position={[-0.4, -0.5, -2.0]} rotation={[0, 0, -Math.PI/4]}>
+        <boxGeometry args={[1.6, 0.04, 0.5]} />
       </mesh>
       
+      {/* Vertical Stabilizer (Upwards) */}
+      <mesh material={bodyMat} position={[0, 0.5, -2.0]}>
+        <boxGeometry args={[0.04, 1.0, 0.5]} />
+      </mesh>
+
       {/* Tail Cone */}
-      <mesh material={bodyMat} position={[0, 0, -1.9]} rotation={[-Math.PI/2, 0, 0]}>
-        <coneGeometry args={[0.35, 0.6, 16]} />
+      <mesh material={bodyMat} position={[0, 0, -2.25]} rotation={[-Math.PI/2, 0, 0]}>
+        <coneGeometry args={[0.2, 0.5, 32]} />
       </mesh>
 
       {/* Pusher Propeller (Rear) */}
-      <group position={[0, 0, -2.3]}>
+      <group position={[0, 0, -2.6]}>
         <mesh material={darkMat} rotation={[Math.PI/2, 0, 0]}>
-          <cylinderGeometry args={[0.1, 0.1, 0.2, 16]} />
+          <cylinderGeometry args={[0.08, 0.08, 0.2, 16]} />
         </mesh>
         <group ref={prop}>
           <mesh material={propMat}>
-            <boxGeometry args={[1.6, 0.05, 0.05]} />
+            <boxGeometry args={[1.8, 0.04, 0.04]} />
           </mesh>
           <mesh material={propMat} rotation={[0, 0, Math.PI/2]}>
-            <boxGeometry args={[1.6, 0.05, 0.05]} />
+            <boxGeometry args={[1.8, 0.04, 0.04]} />
           </mesh>
         </group>
       </group>
       
+      {/* Hellfire Missiles */}
+      <group position={[2.0, -0.1, -0.1]}>
+        <mesh material={bodyMat} position={[0, 0, 0]}><boxGeometry args={[0.04, 0.2, 0.4]} /></mesh>
+        <mesh material={darkMat} position={[0, -0.15, 0.1]}><cylinderGeometry args={[0.06, 0.06, 1.0, 16]} rotation={[Math.PI/2, 0, 0]} /></mesh>
+      </group>
+      <group position={[-2.0, -0.1, -0.1]}>
+        <mesh material={bodyMat} position={[0, 0, 0]}><boxGeometry args={[0.04, 0.2, 0.4]} /></mesh>
+        <mesh material={darkMat} position={[0, -0.15, 0.1]}><cylinderGeometry args={[0.06, 0.06, 1.0, 16]} rotation={[Math.PI/2, 0, 0]} /></mesh>
+      </group>
+
       {/* Landing Gear - Front */}
-      <group position={[0, -0.3, 1.0]}>
-        <mesh material={darkMat} position={[0, -0.3, 0]} rotation={[0, 0, 0]}>
-          <cylinderGeometry args={[0.03, 0.03, 0.6]} />
+      <group position={[0, -0.4, 1.0]}>
+        <mesh material={darkMat} position={[0, -0.2, 0]}>
+          <cylinderGeometry args={[0.02, 0.02, 0.4]} />
         </mesh>
-        <mesh material={propMat} position={[0, -0.6, 0]} rotation={[0, 0, Math.PI/2]}>
-          <cylinderGeometry args={[0.08, 0.08, 0.06]} />
+        <mesh material={propMat} position={[0, -0.4, 0]} rotation={[0, 0, Math.PI/2]}>
+          <cylinderGeometry args={[0.06, 0.06, 0.06]} />
         </mesh>
       </group>
 
       {/* Landing Gear - Rear Left */}
-      <group position={[-0.6, -0.2, -0.5]}>
-        <mesh material={darkMat} position={[0, -0.4, 0]} rotation={[0, 0, Math.PI/6]}>
-          <cylinderGeometry args={[0.04, 0.04, 0.8]} />
+      <group position={[-0.4, -0.2, -0.5]}>
+        <mesh material={darkMat} position={[0, -0.3, 0]} rotation={[0, 0, Math.PI/8]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.6]} />
         </mesh>
-        <mesh material={propMat} position={[-0.2, -0.75, 0]} rotation={[0, 0, Math.PI/2]}>
-          <cylinderGeometry args={[0.12, 0.12, 0.08]} />
+        <mesh material={propMat} position={[-0.1, -0.6, 0]} rotation={[0, 0, Math.PI/2]}>
+          <cylinderGeometry args={[0.1, 0.1, 0.08]} />
         </mesh>
       </group>
       
       {/* Landing Gear - Rear Right */}
-      <group position={[0.6, -0.2, -0.5]}>
-        <mesh material={darkMat} position={[0, -0.4, 0]} rotation={[0, 0, -Math.PI/6]}>
-          <cylinderGeometry args={[0.04, 0.04, 0.8]} />
+      <group position={[0.4, -0.2, -0.5]}>
+        <mesh material={darkMat} position={[0, -0.3, 0]} rotation={[0, 0, -Math.PI/8]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.6]} />
         </mesh>
-        <mesh material={propMat} position={[0.2, -0.75, 0]} rotation={[0, 0, Math.PI/2]}>
-          <cylinderGeometry args={[0.12, 0.12, 0.08]} />
+        <mesh material={propMat} position={[0.1, -0.6, 0]} rotation={[0, 0, Math.PI/2]}>
+          <cylinderGeometry args={[0.1, 0.1, 0.08]} />
         </mesh>
       </group>
     </group>
