@@ -267,16 +267,38 @@ export function PostFlightReview() {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-3 border-t border-border/30">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Activity className="size-3.5" />
-              <p className="text-[0.6rem]">Flight data committed to Tamper-Evident Black Box • SHA-256 verified</p>
+          <div className="flex flex-col gap-3 pt-3 border-t border-border/30">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Activity className="size-3.5" />
+                <p className="text-[0.6rem]">Flight data committed to Tamper-Evident Black Box • SHA-256 verified</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={exportLog} className="rounded-sm border border-border px-3 py-1.5 font-mono text-[0.65rem] uppercase hover:bg-white/10 transition-colors bg-white/5 flex items-center gap-2 text-white">
+                  <Download className="size-3" /> EXPORT BLACKBOX
+                </button>
+                <div className={cn(
+                  "rounded px-3 py-1.5 text-xs font-bold",
+                  isCrashed ? "bg-red-600/30 text-red-300 border border-red-500/40" : "bg-green-600/20 text-green-300 border border-green-500/30"
+                )}>
+                  {isCrashed ? "🔴 GROUNDED — DO NOT FLY" : "🟢 CLEARED FOR DEBRIEF"}
+                </div>
+              </div>
             </div>
-            <div className={cn(
-              "rounded px-3 py-1.5 text-xs font-bold",
-              isCrashed ? "bg-red-600/30 text-red-300 border border-red-500/40" : "bg-green-600/20 text-green-300 border border-green-500/30"
-            )}>
-              {isCrashed ? "🔴 GROUNDED — DO NOT FLY" : "🟢 CLEARED FOR DEBRIEF"}
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 text-[0.65rem] font-mono text-muted-foreground bg-black/40 p-2.5 rounded border border-white/5">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="size-3.5 text-blue-400" />
+                <span className="text-white/40 uppercase tracking-widest mr-1">LAST TRACE:</span>
+                <span className="text-white">LAT {displayed?.sample.gps?.lat.toFixed(6)}°</span> <span className="text-white/30">•</span> <span className="text-white">LON {displayed?.sample.gps?.lon.toFixed(6)}°</span>
+              </div>
+              <div className="hidden sm:block h-3 w-px bg-white/10" />
+              <div className="flex items-center gap-1.5 pl-5 sm:pl-0">
+                <span className="text-white/40 uppercase tracking-widest mr-1">{isCrashed ? "IMPACT COORDS:" : "LANDING COORDS:"}</span>
+                <span className={isCrashed ? "text-red-400 font-bold" : "text-green-400 font-bold"}>
+                  {displayed?.sample.gps?.lat.toFixed(6)}, {displayed?.sample.gps?.lon.toFixed(6)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
