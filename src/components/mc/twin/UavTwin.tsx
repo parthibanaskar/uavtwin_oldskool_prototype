@@ -43,6 +43,7 @@ export function UavTwin() {
   const propIdRef = useRef<string | null>(null);
   const { displayed, focusHotspot, setFocusHotspot } = useMission();
   const [ready, setReady] = useState(false);
+  const [debugNodes, setDebugNodes] = useState<string[]>([]);
   const idxToId = useRef<Record<number, string>>({});
   
   const health = displayed?.health;
@@ -65,12 +66,15 @@ export function UavTwin() {
 
     const client = new window.Sketchfab(iframe);
     client.init(MODEL_UID, {
-      success: (api: SketchfabAPI) => {
+      success: (api: SketchfabAPI & { setCameraLookAt: any }) => {
         apiRef.current = api;
         api.start();
         api.addEventListener("viewerready", () => {
           api.setAnnotationCameraTransition(false);
           api.showAnnotationTooltips(false);
+
+          // Zoom out slightly to fit the box
+          api.setCameraLookAt([6, 6, 2], [0, 0, 0], 0);
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
             const label = HOTSPOTS[id]?.label ?? id;
@@ -88,14 +92,18 @@ export function UavTwin() {
           // Find propeller node in the scene graph
           api.getSceneGraph((err, result) => {
             if (err) return;
+            const names: string[] = [];
             const findProp = (node: any) => {
               const name = (node.name || "").toLowerCase();
+              if (name) names.push(name);
+              
               if (name.includes("prop") || name.includes("rotor") || name.includes("blade") || name.includes("engine")) {
                 propIdRef.current = node.instanceID;
               }
               if (node.children) node.children.forEach(findProp);
             };
             findProp(result);
+            setDebugNodes(names.filter(n => n.length > 2 && !n.includes("rootNode")));
           });
         });
       },
@@ -170,7 +178,6 @@ export function UavTwin() {
       />
 
       {/* ── Loading Overlay ── */}
-
       {!ready && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20">
           <div className="flex flex-col items-center gap-2 rounded-lg bg-black/60 px-6 py-4 backdrop-blur-sm">
@@ -179,6 +186,13 @@ export function UavTwin() {
           </div>
         </div>
       )}
+
+      {/* ── Temporary Debug Nodes List ── */}
+      <div className="absolute top-2 right-2 w-64 max-h-48 overflow-y-auto bg-black/80 text-white text-[11px] p-2 rounded z-50 pointer-events-auto border border-white/20">
+        <p className="font-bold mb-1 text-yellow-400">Parts List (Debug):</p>
+        <p className="text-gray-300 mb-1 leading-tight">If there is no 'propeller' or similar here, it's a baked mesh.</p>
+        {debugNodes.length === 0 ? "Loading nodes..." : debugNodes.join(", ")}
+      </div>
 
       {/* ── XAI Health Badges ── */}
       {ready && (
