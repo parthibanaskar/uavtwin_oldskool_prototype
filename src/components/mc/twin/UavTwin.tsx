@@ -65,9 +65,19 @@ export function UavTwin() {
 
   const health = displayed?.health;
 
+  // Show UI immediately — don't block on viewerready (model loads in background)
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 1200);
+    return () => clearTimeout(t);
+  }, []);
+
   // Load Sketchfab SDK script once
   useEffect(() => {
-    if (document.getElementById("sf-sdk")) return;
+    if (document.getElementById("sf-sdk")) {
+      // Script already loaded from a previous mount
+      if (window.Sketchfab && !apiRef.current) initViewer();
+      return;
+    }
     const s = document.createElement("script");
     s.id = "sf-sdk";
     s.src = "https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js";
@@ -87,11 +97,10 @@ export function UavTwin() {
         apiRef.current = api;
         api.start();
         api.addEventListener("viewerready", () => {
-          // Disable automatic camera fly-to on annotation click — we handle focus ourselves
           api.setAnnotationCameraTransition(false);
           api.showAnnotationTooltips(false);
 
-          // Add all annotations
+          // Add all annotations after model is ready
           ANNOTATIONS.forEach(({ id, position, eye }) => {
             const label = HOTSPOTS[id]?.label ?? id;
             api.addAnnotation(position, eye, label, "", (_err, idx) => {
@@ -100,9 +109,9 @@ export function UavTwin() {
             });
           });
 
-          // Wire annotation select → focusHotspot
           api.addEventListener("annotationSelect", (idx) => {
             const id = idxToId.current[idx as number];
+
             if (id) setFocusHotspot(id);
           });
           api.addEventListener("annotationUnselect", () => setFocusHotspot(null));
@@ -128,7 +137,7 @@ export function UavTwin() {
 
   return (
     <div className="relative w-full h-full bg-[#101720]">
-      {/* ── Sketchfab iframe ── */}
+      {/* ── Sketchfab iframe — always visible from the start ── */}
       <iframe
         ref={iframeRef}
         title="MQ-1C Gray Eagle Digital Twin"
@@ -139,13 +148,16 @@ export function UavTwin() {
         style={{ display: "block" }}
       />
 
-      {/* ── Loading overlay ── */}
+      {/* ── Loading overlay (transparent, non-blocking) ── */}
       {!ready && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#101720] text-muted-foreground gap-2">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-xs">Loading MQ-1C Gray Eagle…</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <div className="flex flex-col items-center gap-2 rounded-lg bg-black/60 px-6 py-4 backdrop-blur-sm">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span className="text-xs text-muted-foreground">Loading MQ-1C Gray Eagle…</span>
+          </div>
         </div>
       )}
+
 
       {/* ── XAI Health badge overlay ── */}
       {ready && (
