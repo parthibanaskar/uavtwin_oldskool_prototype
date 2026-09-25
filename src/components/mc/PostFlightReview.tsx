@@ -31,7 +31,7 @@ export function PostFlightReview() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = light-blackbox-.json;
+    a.download = `flight-blackbox-${displayed?.sample.missionId ?? "export"}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
