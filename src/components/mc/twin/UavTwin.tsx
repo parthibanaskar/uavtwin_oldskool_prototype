@@ -49,22 +49,22 @@ function Airframe({ rpm, vibration }: { rpm: number; vibration: number }) {
       {/* ===== FUSELAGE ===== */}
       {/* Main body - long tapered cylinder */}
       <mesh material={bodyMat} position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
-        <cylinderGeometry args={[0.28, 0.15, 5.0, 32]} />
+        <cylinderGeometry args={[0.48, 0.22, 5.2, 32]} />
       </mesh>
 
       {/* Bulbous nose dome - MQ-1C distinctive smooth round head */}
-      <mesh material={bodyMat} position={[0, 0.04, 2.4]} scale={[1.0, 0.95, 1.6]}>
+      <mesh material={bodyMat} position={[0, 0.08, 2.45]} scale={[1.3, 1.25, 2.0]}>
         <sphereGeometry args={[0.3, 32, 32]} />
       </mesh>
 
       {/* Nose neck connector */}
-      <mesh material={bodyMat} position={[0, 0.02, 2.0]} rotation={[Math.PI/2, 0, 0]}>
-        <cylinderGeometry args={[0.28, 0.28, 0.8, 32]} />
+      <mesh material={bodyMat} position={[0, 0.05, 1.95]} rotation={[Math.PI/2, 0, 0]}>
+        <cylinderGeometry args={[0.48, 0.48, 0.9, 32]} />
       </mesh>
 
       {/* Belly fairing - slightly protruding underbelly */}
-      <mesh material={bodyMat} position={[0, -0.18, 0.3]} scale={[1.0, 0.5, 3.5]}>
-        <sphereGeometry args={[0.28, 32, 16]} />
+      <mesh material={bodyMat} position={[0, -0.26, 0.3]} scale={[1.3, 0.65, 4.0]}>
+        <sphereGeometry args={[0.42, 32, 16]} />
       </mesh>
 
       {/* Engine nacelle/intake on top - behind cockpit */}
