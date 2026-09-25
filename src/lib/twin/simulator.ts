@@ -137,17 +137,17 @@ export class SimulatedTelemetrySource implements TelemetrySource {
     const raw: Record<ParamKey, number> = { ...spec.nominal };
 
     // ---- Fault physics -------------------------------------------------
-    const bearing = this.progress("bearingWear", 75);
-    const imbalance = this.progress("propImbalance", 25);
-    const oilStarve = this.progress("oilStarvation", 45);
-    const overtemp = this.progress("egtOvertemp", 40);
-    const pumpDegrade = this.progress("fuelPumpDegrade", 60);
-    const blockage = this.progress("fuelBlockage", 20);
-    const drift = this.progress("sensorDrift", 50);
-    const vibFail = this.progress("vibSensorFail", 5);
-    const busSag = this.progress("busSag", 35);
-    const spoof = this.progress("gpsSpoof", 12);
-    const icing = this.progress("icing", 40);
+    const bearing = this.progress("bearingWear", 2);
+    const imbalance = this.progress("propImbalance", 2);
+    const oilStarve = this.progress("oilStarvation", 2);
+    const overtemp = this.progress("egtOvertemp", 2);
+    const pumpDegrade = this.progress("fuelPumpDegrade", 2);
+    const blockage = this.progress("fuelBlockage", 2);
+    const drift = this.progress("sensorDrift", 2);
+    const vibFail = this.progress("vibSensorFail", 2);
+    const busSag = this.progress("busSag", 2);
+    const spoof = this.progress("gpsSpoof", 2);
+    const icing = this.progress("icing", 2);
 
     const fuelPathPenalty = this.fuelPath === "secondary" ? 0.04 : 0;
     const effectiveStarve = this.fuelPath === "secondary" ? blockage * 0.25 : blockage;
