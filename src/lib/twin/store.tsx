@@ -120,18 +120,19 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
 
     // Auto-resolve critical alerts to show the mitigation UI popup automatically
+  const resolvingRef = useRef(new Set<string>());
   useEffect(() => {
-    if (alerts.length === 0 || paused) return;
-    const criticals = alerts.filter(a => a.severity === 'critical' && !resolvedAlerts.has(a.id));
+    if (paused) return;
+    const criticals = alerts.filter(a => a.severity === 'critical' && !resolvedAlerts.has(a.id) && !resolvingRef.current.has(a.id));
     if (criticals.length > 0) {
-      const timer = setTimeout(() => {
+      criticals.forEach(c => resolvingRef.current.add(c.id));
+      setTimeout(() => {
         setResolvedAlerts(prev => {
           const next = new Set(prev);
           criticals.forEach(c => next.add(c.id));
           return next;
         });
-      }, 4000); // Wait 4 seconds for dramatic effect before fixing
-      return () => clearTimeout(timer);
+      }, 4000);
     }
   }, [alerts, resolvedAlerts, paused]);
 
