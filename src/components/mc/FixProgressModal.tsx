@@ -287,10 +287,11 @@ function FixProgressPanel({ alert, onDone }: Props) {
   }, DIVERT_SITES[0]);
 
   function handleDivertNow() {
-    commandSafeLanding(nearestSite.name);
-    divert(nearestSite.lat, nearestSite.lon);
-    setDiverted(true);
-  }
+      commandSafeLanding(nearestSite.name);
+      divert(nearestSite.lat, nearestSite.lon);
+      setDiverted(true);
+      onDone();
+    }
 
   useEffect(() => {
     if (done) return;
