@@ -84,6 +84,15 @@ export class SimulatedTelemetrySource implements TelemetrySource {
     return this.fuelPath;
   }
 
+  private isDiverting = false;
+  private divertStartT = 0;
+
+  divert(lat: number, lon: number) {
+    this.isDiverting = true;
+    this.divertStartT = this.t;
+    this.setProfile("descent");
+  }
+
   injectFault(key: string) {
     if (!this.faults.has(key)) this.faults.set(key, 0);
   }
@@ -224,7 +233,15 @@ export class SimulatedTelemetrySource implements TelemetrySource {
     // Anti-spoofing check
     const spoofCheck = checkGPSconsistency(gps.lat, gps.lon, this.inertial.lat, this.inertial.lon);
 
-    const sample: Sample = {
+    
+      if (this.isDiverting && (this.t - this.divertStartT) * 0.046 >= 4.0) {
+          this.faults.clear();
+          this.profile = "idle";
+          params.rpm = 0;
+          params.vibration = 0;
+      }
+      
+      const sample: Sample = {
       t: this.t,
       wallClock: Date.now(),
       profile: this.profile,
@@ -247,12 +264,12 @@ export class SimulatedTelemetrySource implements TelemetrySource {
         fatigue_crack_m: this.fatigueCrackMeters,
         rul_seconds,
         gpsSpoofed: spoofCheck.spoofed,
-          altitude_ft: 2000.0,
-          mission_distance_km: Math.max(0, 300.0 - (this.t * 0.046)),
-          mission_time_seconds: Math.max(0, 300.0 - (this.t * 0.046)) / 0.046,
+          altitude_ft: this.isDiverting ? Math.max(0, 2000.0 - ((this.t - this.divertStartT) * 120)) : 2000.0,
+          mission_distance_km: this.isDiverting ? Math.max(0, 4.0 - ((this.t - this.divertStartT) * 0.046)) : Math.max(0, 300.0 - (this.t * 0.046)),
+          mission_time_seconds: this.isDiverting ? Math.max(0, 4.0 - ((this.t - this.divertStartT) * 0.046)) / 0.046 : Math.max(0, 300.0 - (this.t * 0.046)) / 0.046,
           cumulative_damage_pct: (this.fatigueCrackMeters / 0.0025) * 100.0,
-          landing_mode: false,
-          landed: false,
+          landing_mode: this.isDiverting && (this.t - this.divertStartT) * 0.046 < 4.0,
+          landed: this.isDiverting && (this.t - this.divertStartT) * 0.046 >= 4.0,
           crashed: false
       }
     };
