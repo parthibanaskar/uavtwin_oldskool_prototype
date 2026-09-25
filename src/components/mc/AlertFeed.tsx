@@ -23,7 +23,19 @@ export function AlertFeed({ className }: { className?: string }) {
             No telemetry data available.
           </p>
         ) : null}
-        {[...alerts].reverse().map((a) => {
+        {[...alerts].sort((a, b) => {
+          const aCrit = a.severity === "critical" && !resolvedAlerts.has(a.id);
+          const bCrit = b.severity === "critical" && !resolvedAlerts.has(b.id);
+          if (aCrit && !bCrit) return -1;
+          if (!aCrit && bCrit) return 1;
+          
+          const aWarn = a.severity === "warning" && !resolvedAlerts.has(a.id);
+          const bWarn = b.severity === "warning" && !resolvedAlerts.has(b.id);
+          if (aWarn && !bWarn) return -1;
+          if (!aWarn && bWarn) return 1;
+
+          return b.raisedAt - a.raisedAt;
+        }).map((a) => {
           const tone = severityTone(a.severity);
           const open = selectedAlertId === a.id;
           const total = a.contributions.reduce((s, c) => s + Math.abs(c.value), 0) || 1;
