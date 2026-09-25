@@ -68,7 +68,7 @@ export function TopBar() {
           <Activity className="size-4 text-primary" />
         </div>
           <div title={displayed?.sample.physics?.fault_history?.map(k => SCENARIO_BY_KEY[k]?.label || k).join("\n") || ""}>
-            <h1 className="text-base leading-none font-semibold">UAV ENGINE MISSION CONTROL</h1>
+            <h1 className="text-base leading-none font-semibold text-primary">VAYUTWIN - DIGITAL TWIN ENGINE</h1>
             <p className={cn("text-[0.65rem] uppercase tracking-wider mt-1 cursor-help", statusColor)}>{liveStatus}</p>
           </div>
       </div>
