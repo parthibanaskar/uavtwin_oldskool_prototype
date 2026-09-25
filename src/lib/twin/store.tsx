@@ -98,7 +98,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const sessionIdRef = useRef<string | null>(null);
   const ignoreUntil = useRef<number>(0);
 
-  const [missionId] = useState(makeMissionId);
+  const [missionId, setMissionId] = useState(makeMissionId);
   const [frames, setFrames] = useState<Frame[]>([]);
   const [live, setLive] = useState<Derived | null>(null);
   const [cursor, setCursor] = useState<number | null>(null);
@@ -426,7 +426,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     setHealActions([]);
     setAlerts([]); // ADDED to clear alert feed!
     healthHistory.current = {}; // ADDED to reset UI RUL tracking
-    activeAlertKeys.current.clear(); // ADDED to reset alert debouncing
+    activeAlertKeys.current.clear();
+    setMissionId(makeMissionId());
     log("fault.resetAll", {});
   }, [log]);
 
