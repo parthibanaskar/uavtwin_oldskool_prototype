@@ -28,6 +28,7 @@ export function PostFlightReview() {
 
   // Only show if landed or crashed
   if (!phys?.landed && !phys?.crashed) return null;
+  if (closed) return null;
 
   const isCrashed = phys.crashed && !phys.landed;
   const isLanded = phys.landed;
