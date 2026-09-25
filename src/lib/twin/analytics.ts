@@ -755,7 +755,21 @@ export function evaluateAlerts(d: Derived): AlertCandidate[] {
         narrative: `CRITICAL FAILURE: The aircraft has suffered a catastrophic structural failure and crashed.\n\n• Root Cause: Unmitigated mechanical fault led to complete structural shearing of the engine shaft.\n• Physical Impact: Complete loss of thrust and aerodynamics. The vehicle plummeted to the ground.\n• Action: Mission Terminated. Dispatch search and rescue.`,
         resolutionNarrative: `ACTION EXECUTED: Emergency Search and Rescue Deployed.\n\n• Mitigation: Flight computer wiped cryptographic keys to secure military intelligence.\n• Outcome: Recovery teams dispatched to the final transmitted coordinates (${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}).`
       });
-    } else if (phys.rul_seconds < 60) {
+    } else if (phys.rul_seconds <= 0 && phys.altitude_ft && phys.altitude_ft > 0) {
+        push({
+          key: "plummeting",
+          subsystem: "engine",
+          title: "CRITICAL: AIRCRAFT IN FREEFALL",
+          severity: "critical",
+          confidence: 1.0,
+          hotspot: "engine",
+          contributions: [
+            { key: "rpm", label: "Altitude", value: 100, detail: phys.altitude_ft.toFixed(0) + " ft and dropping" }
+          ],
+          narrative: "Remaining Useful Life exhausted. Engine shaft has sheared. Aircraft has lost all thrust and is plummeted towards terrain.",
+          resolutionNarrative: ""
+        });
+      } else if (phys.rul_seconds < 60 && !phys.crashed) {
       push({
         key: "imminentCrash",
         subsystem: "engine",
