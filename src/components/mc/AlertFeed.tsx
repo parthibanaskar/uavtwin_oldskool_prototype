@@ -23,7 +23,7 @@ export function AlertFeed({ className }: { className?: string }) {
             No telemetry data available.
           </p>
         ) : null}
-        {alerts.map((a) => {
+        {[...alerts].reverse().map((a) => {
           const tone = severityTone(a.severity);
           const open = selectedAlertId === a.id;
           const total = a.contributions.reduce((s, c) => s + Math.abs(c.value), 0) || 1;
