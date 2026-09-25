@@ -3,7 +3,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { useGLTF, Environment, OrbitControls, Html, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 import { useMission } from "@/lib/twin/store";
-import { HOTSPOTS } from "@/lib/twin/types";
+import { HOTSPOTS } from "@/lib/twin/profiles";
 
 // Annotations matched to the original Sketchfab positions but slightly adapted for native 3D
 const ANNOTATIONS = [
