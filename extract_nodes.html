@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head>
+    <script src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
+  </head>
+  <body>
+    <iframe id="api-frame" width="640" height="480"></iframe>
+    <script>
+      var iframe = document.getElementById("api-frame");
+      var client = new Sketchfab(iframe);
+      client.init("67703aedf76945ce872fc576be6a4321", {
+        success: function onSuccess(api) {
+          api.start();
+          api.addEventListener("viewerready", function () {
+            api.getSceneGraph(function (err, result) {
+              let names = [];
+              function traverse(node) {
+                if (node.name)
+                  names.push(node.name + " (" + node.instanceID + ")");
+                if (node.children) node.children.forEach(traverse);
+              }
+              traverse(result);
+              console.log(JSON.stringify(names));
+              document.body.innerHTML +=
+                "<pre>" + JSON.stringify(names, null, 2) + "</pre>";
+            });
+          });
+        },
+      });
+    </script>
+  </body>
+</html>

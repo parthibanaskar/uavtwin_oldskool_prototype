@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <body>
+    <iframe
+      src=""
+      id="api-frame"
+      allow="autoplay; fullscreen; xr-spatial-tracking"
+      width="800"
+      height="600"
+    ></iframe>
+    <script
+      type="text/javascript"
+      src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"
+    ></script>
+    <script>
+      var iframe = document.getElementById("api-frame");
+      var client = new Sketchfab(iframe);
+      client.init("67703aedf76945ce872fc576be6a4321", {
+        success: function (api) {
+          console.log("METHODS=" + Object.keys(api).join(","));
+          document.body.innerHTML +=
+            "<div id='result'>" + Object.keys(api).join(",") + "</div>";
+        },
+      });
+    </script>
+  </body>
+</html>

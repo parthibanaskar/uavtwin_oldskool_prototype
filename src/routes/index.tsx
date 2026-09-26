@@ -17,6 +17,7 @@ import { BlackBoxPanel } from "@/components/mc/BlackBoxPanel";
 import { MasterAlarmBanner } from "@/components/mc/MasterAlarmBanner";
 import { ThreatAssessment } from "@/components/mc/ThreatAssessment";
 import { UavTwin } from "@/components/mc/twin/UavTwin";
+import { WeatherWidget } from "@/components/mc/WeatherWidget";
 import { Chip, Panel, healthTone, toneText } from "@/components/mc/primitives";
 import { cn } from "@/lib/utils";
 import { FixProgressModal } from "@/components/mc/FixProgressModal";
@@ -111,6 +112,10 @@ function TwinPanel() {
             </div>
           </div>
         ) : null}
+        
+        {displayed?.sample && (
+          <WeatherWidget lat={displayed.sample.gps.lat} lon={displayed.sample.gps.lon} />
+        )}
       </div>
     </Panel>
   );
