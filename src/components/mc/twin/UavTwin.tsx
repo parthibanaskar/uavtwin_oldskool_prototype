@@ -27,41 +27,7 @@ declare global {
   }
 }
 
-function AirspaceBackground() {
-  return (
-    <div className="absolute inset-0 z-0 overflow-hidden bg-[#0a0e17]">
-      {/* 2D Flat Graph Grid */}
-      <div
-        className="absolute inset-0 opacity-20 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px)
-          `,
-          backgroundSize: "100px 100px",
-          backgroundPosition: "0 0",
-        }}
-      />
-      {/* Yellow Axis Ticks (Top) */}
-      <div 
-        className="absolute top-0 left-0 right-0 h-[12px] pointer-events-none z-0"
-        style={{
-          backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 99px, rgba(234, 179, 8, 0.5) 99px, rgba(234, 179, 8, 0.5) 100px)",
-          borderBottom: "1px solid rgba(234, 179, 8, 0.3)"
-        }}
-      />
-      {/* Yellow Axis Ticks (Left) */}
-      <div 
-        className="absolute top-0 left-0 bottom-0 w-[12px] pointer-events-none z-0"
-        style={{
-          backgroundImage: "repeating-linear-gradient(180deg, transparent, transparent 99px, rgba(234, 179, 8, 0.5) 99px, rgba(234, 179, 8, 0.5) 100px)",
-          borderRight: "1px solid rgba(234, 179, 8, 0.3)"
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-[#0a0e17]/30 to-transparent pointer-events-none" />
-    </div>
-  );
-}
+
 
 export function UavTwin() {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -113,7 +79,7 @@ export function UavTwin() {
       autostart: 1,
       preload: 1,
       camera: 0,
-      transparent: 1, // Leaves Sketchfab background transparent so our CSS gradient shows
+      transparent: 0, // Leaves Sketchfab background transparent so our CSS gradient shows
     });
   }, [setFocusHotspot]);
 
@@ -199,7 +165,7 @@ export function UavTwin() {
       className="absolute inset-0 overflow-hidden flex flex-col bg-[#020813]"
       style={{ perspective: "1000px" }}
     >
-      <AirspaceBackground />
+      
 
       <div
         ref={wrapperRef}
