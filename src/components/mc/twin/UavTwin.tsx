@@ -48,7 +48,6 @@ export function UavTwin() {
     const iframe = iframeRef.current;
     if (!iframe || !window.Sketchfab) return;
 
-    // Prevent double initialization
     if (apiRef.current) return;
 
     const client = new window.Sketchfab(iframe);
@@ -60,9 +59,10 @@ export function UavTwin() {
           api.setAnnotationCameraTransition(false);
           api.showAnnotationTooltips(false);
 
-          // Instead of manually shifting the camera and breaking coordinates,
-          // we simply widen the Field of View to 65.
-          // This perfectly zooms the drone out to exactly counteract the 135% CSS scale mask!
+          // Stop all native Sketchfab animations (fixes landing gears opening continuously)
+          api.pause();
+          api.seekTo(0);
+
           api.setFov(65);
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
@@ -93,8 +93,7 @@ export function UavTwin() {
               if (
                 name.includes("prop") ||
                 name.includes("rotor") ||
-                name.includes("blade") ||
-                name.includes("engine")
+                name.includes("blade")
               ) {
                 propIdRef.current = node.instanceID;
               }
@@ -110,6 +109,8 @@ export function UavTwin() {
         console.error("Viewer error");
         setReady(true);
       },
+      ui_animations: 0,
+      animation_autoplay: 0,
       ui_controls: 0,
       ui_infos: 0,
       ui_watermark: 0,
@@ -156,16 +157,17 @@ export function UavTwin() {
       const shakeX = (Math.random() - 0.5) * shakeAmt;
       const shakeY = (Math.random() - 0.5) * shakeAmt;
 
-      // Using direct DOM manipulation for the physics transform completely prevents
-      // React from endlessly re-rendering this component 60 times a second.
-      // This stops React from accidentally resetting or wiping the Sketchfab iframe!
       if (wrapperRef.current) {
         wrapperRef.current.style.transform = `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`;
       }
 
       if (!apiRef.current || !propIdRef.current) return;
+
+      // Calculate rotation speed from actual simulation RPM
       angle += (rpm / 60) * 0.25;
-      apiRef.current.rotate(propIdRef.current, [angle, 0, 0, 1], {
+
+      // Rotate the propeller around the Y axis (forward/backward local axis for aircraft)
+      apiRef.current.rotate(propIdRef.current, [angle, 0, 1, 0], {
         duration: 0,
       });
     };
