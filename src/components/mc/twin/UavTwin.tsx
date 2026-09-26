@@ -2,6 +2,60 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useMission } from "@/lib/twin/store";
 import { HOTSPOTS } from "@/lib/twin/profiles";
 import { healthTone } from "../primitives";
+import { Canvas, useFrame } from "@react-three/fiber";
+import * as THREE from "three";
+
+function HUD() {
+  const groupRef = useRef<THREE.Group>(null);
+
+  useFrame((_state, delta) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.z += delta * 0.2; // Slow rotation around Z-up
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Ground Grid on the XY plane (since Z is up) */}
+      <gridHelper
+        args={[20, 40, "#10b981", "#10b981"]}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
+        <lineBasicMaterial
+          attach="material"
+          color="#10b981"
+          transparent
+          opacity={0.15}
+        />
+      </gridHelper>
+
+      {/* Outer rotating ring */}
+      <mesh>
+        <ringGeometry args={[9.9, 10, 64]} />
+        <meshBasicMaterial
+          color="#0ea5e9"
+          transparent
+          opacity={0.5}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* XYZ Origin Axes */}
+      <axesHelper args={[7]} />
+
+      {/* Subtle sci-fi wireframe globe */}
+      <mesh>
+        <sphereGeometry args={[10, 16, 16]} />
+        <meshBasicMaterial
+          color="#10b981"
+          wireframe
+          transparent
+          opacity={0.03}
+        />
+      </mesh>
+    </group>
+  );
+}
 
 const MODEL_UID = "67703aedf76945ce872fc576be6a4321";
 
@@ -46,7 +100,7 @@ export function UavTwin() {
   const initViewer = useCallback(() => {
     const iframe = iframeRef.current;
     if (!iframe || !window.Sketchfab) return;
-    
+
     // Prevent double initialization
     if (apiRef.current) return;
 
@@ -63,9 +117,15 @@ export function UavTwin() {
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
             const label = HOTSPOTS[id]?.label ?? id;
-            api.addAnnotation(position, eye, label, "", (_err: any, idx: number) => {
-              idxToId.current[idx] = id;
-            });
+            api.addAnnotation(
+              position,
+              eye,
+              label,
+              "",
+              (_err: any, idx: number) => {
+                idxToId.current[idx] = id;
+              },
+            );
           });
 
           api.addEventListener("annotationSelect", (idx: number) => {
@@ -73,7 +133,7 @@ export function UavTwin() {
             if (id) setFocusHotspot(id);
           });
           api.addEventListener("annotationUnselect", () =>
-            setFocusHotspot(null)
+            setFocusHotspot(null),
           );
 
           api.getSceneGraph((err: any, result: any) => {
@@ -124,7 +184,7 @@ export function UavTwin() {
     s.src = "https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js";
     s.onload = () => initViewer();
     document.head.appendChild(s);
-    
+
     return () => clearTimeout(failsafe);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -156,11 +216,9 @@ export function UavTwin() {
 
       if (!apiRef.current || !propIdRef.current) return;
       angle += (rpm / 60) * 0.25;
-      apiRef.current.rotate(
-        propIdRef.current,
-        [angle, 0, 0, 1],
-        { duration: 0 }
-      );
+      apiRef.current.rotate(propIdRef.current, [angle, 0, 0, 1], {
+        duration: 0,
+      });
     };
     timer = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(timer);
@@ -182,6 +240,13 @@ export function UavTwin() {
           allow="autoplay; fullscreen; xr-spatial-tracking"
           className="w-full h-full border-0 outline-none"
         />
+
+        {/* Transparent overlay for the 3D HUD axes */}
+        <div className="absolute inset-0 pointer-events-none z-10 mix-blend-screen">
+          <Canvas camera={{ position: [9, 9, 3], up: [0, 0, 1], fov: 45 }}>
+            <HUD />
+          </Canvas>
+        </div>
       </div>
 
       <div
@@ -209,9 +274,7 @@ export function UavTwin() {
           {ANNOTATIONS.map(({ id }) => {
             const subsystem = HOTSPOTS[id]?.subsystem;
             const val =
-              subsystem && health
-                ? (health.subsystems[subsystem] ?? 100)
-                : 100;
+              subsystem && health ? (health.subsystems[subsystem] ?? 100) : 100;
             const tone = healthTone(val);
             const color = TONE_HEX[tone] || TONE_HEX.nominal;
             const isActive = focusHotspot === id;
