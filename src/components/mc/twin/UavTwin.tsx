@@ -24,18 +24,105 @@ const TONE_HEX: Record<string, string> = {
 declare global {
   interface Window {
     Sketchfab: any;
+    Cesium: any;
   }
+}
+
+function CesiumBackground() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let viewer: any = null;
+
+    const initCesium = () => {
+      if (!window.Cesium || !containerRef.current) return;
+
+      // Initialize a lightweight Cesium viewer without UI controls
+      viewer = new window.Cesium.Viewer(containerRef.current, {
+        animation: false,
+        baseLayerPicker: false,
+        fullscreenButton: false,
+        geocoder: false,
+        homeButton: false,
+        infoBox: false,
+        sceneModePicker: false,
+        selectionIndicator: false,
+        timeline: false,
+        navigationHelpButton: false,
+        navigationInstructionsInitiallyVisible: false,
+        scene3DOnly: true,
+      });
+
+      // Hide all Cesium logos and credits to keep the UI clean
+      const elements = containerRef.current.querySelectorAll(
+        ".cesium-viewer-bottom, .cesium-viewer-toolbar",
+      );
+      elements.forEach((el: any) => {
+        el.style.display = "none";
+      });
+
+      // Start the camera high above a scenic location (Grand Canyon region)
+      viewer.camera.flyTo({
+        destination: window.Cesium.Cartesian3.fromDegrees(
+          -112.1129,
+          36.1069,
+          4000,
+        ),
+        orientation: {
+          heading: window.Cesium.Math.toRadians(45.0),
+          pitch: window.Cesium.Math.toRadians(-60.0), // looking slightly down
+          roll: 0.0,
+        },
+        duration: 0,
+      });
+
+      // Continuously fly forward every frame
+      viewer.scene.preUpdate.addEventListener(() => {
+        if (!viewer) return;
+        viewer.camera.moveForward(4.0);
+      });
+    };
+
+    if (window.Cesium) {
+      initCesium();
+    } else {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href =
+        "https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css";
+      document.head.appendChild(link);
+
+      const script = document.createElement("script");
+      script.src =
+        "https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js";
+      script.onload = initCesium;
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      if (viewer) viewer.destroy();
+    };
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0 z-0 pointer-events-none opacity-80"
+    />
+  );
 }
 
 export function UavTwin() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const apiRef = useRef<any>(null);
-  const propIdRef = useRef<string | null>(null);
+  const propIdsRef = useRef<string[]>([]);
 
   const { displayed, focusHotspot, setFocusHotspot } = useMission();
   const [ready, setReady] = useState(false);
   const idxToId = useRef<Record<number, string>>({});
+
+  const [debugText, setDebugText] = useState("");
 
   const health = displayed?.health;
   const stateRef = useRef(displayed);
@@ -59,10 +146,8 @@ export function UavTwin() {
           api.setAnnotationCameraTransition(false);
           api.showAnnotationTooltips(false);
 
-          // Stop all native Sketchfab animations (fixes landing gears opening continuously)
           api.pause();
           api.seekTo(0);
-
           api.setFov(65);
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
@@ -88,18 +173,40 @@ export function UavTwin() {
 
           api.getSceneGraph((err: any, result: any) => {
             if (err) return;
-            const findProp = (node: any) => {
+
+            const propIds: string[] = [];
+            const allNames: string[] = [];
+
+            const findProps = (node: any, parent: any = null) => {
               const name = (node.name || "").toLowerCase();
-              if (
+              const isMatch =
                 name.includes("prop") ||
                 name.includes("rotor") ||
-                name.includes("blade")
-              ) {
-                propIdRef.current = node.instanceID;
+                name.includes("blade") ||
+                name.includes("spin");
+
+              if (node.name && node.type !== "Group") {
+                allNames.push(
+                  `${node.type}: ${node.name} ${isMatch ? "<- MATCH" : ""}`,
+                );
               }
-              if (node.children) node.children.forEach(findProp);
+
+              if (isMatch) {
+                if (node.type === "MatrixTransform") {
+                  propIds.push(node.instanceID);
+                } else if (parent && parent.type === "MatrixTransform") {
+                  propIds.push(parent.instanceID);
+                }
+              }
+
+              if (node.children) {
+                node.children.forEach((c: any) => findProps(c, node));
+              }
             };
-            findProp(result);
+
+            findProps(result);
+            propIdsRef.current = [...new Set(propIds)];
+            setDebugText(allNames.join("\n"));
           });
 
           setTimeout(() => setReady(true), 1500);
@@ -161,14 +268,15 @@ export function UavTwin() {
         wrapperRef.current.style.transform = `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`;
       }
 
-      if (!apiRef.current || !propIdRef.current) return;
+      if (!apiRef.current || propIdsRef.current.length === 0) return;
 
-      // Calculate rotation speed from actual simulation RPM
-      angle += (rpm / 60) * 0.25;
+      let visualRpm = rpm;
+      if (visualRpm > 400) visualRpm = 400;
 
-      // Rotate the propeller around the Y axis (forward/backward local axis for aircraft)
-      apiRef.current.rotate(propIdRef.current, [angle, 0, 1, 0], {
-        duration: 0,
+      angle += (visualRpm / 60) * 0.5;
+
+      propIdsRef.current.forEach((id) => {
+        apiRef.current.rotate(id, [angle, 0, 1, 0], { duration: 0 });
       });
     };
     timer = requestAnimationFrame(tick);
@@ -177,12 +285,15 @@ export function UavTwin() {
 
   return (
     <div
-      className="absolute inset-0 bg-[#101720] overflow-hidden flex flex-col cursor-move"
-      style={{ perspective: "1000px" }}
+      className="absolute inset-0 overflow-hidden flex flex-col cursor-move"
+      style={{ perspective: "1000px", backgroundColor: "#020813" }}
     >
+      {/* 3D Photorealistic Satellite Globe Background */}
+      <CesiumBackground />
+
       <div
         ref={wrapperRef}
-        className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center"
+        className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center z-10"
       >
         <iframe
           ref={iframeRef}
@@ -210,6 +321,16 @@ export function UavTwin() {
           </div>
         </div>
       </div>
+
+      {/* STEALTH DEBUG PANEL */}
+      {ready && propIdsRef.current.length === 0 && (
+        <div className="absolute top-0 right-0 p-4 w-64 max-h-[80%] overflow-y-auto bg-black/80 text-[10px] text-red-500 font-mono z-50 pointer-events-none">
+          <h4 className="font-bold border-b border-red-500 mb-2">
+            DEBUG: NO PROP FOUND
+          </h4>
+          <pre className="whitespace-pre-wrap">{debugText}</pre>
+        </div>
+      )}
 
       {ready && (
         <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 pointer-events-none z-20">
