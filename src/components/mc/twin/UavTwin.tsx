@@ -156,14 +156,15 @@ export function UavTwin() {
         if (apiRef.current.getWorldToScreenCoordinates) {
           apiRef.current.getWorldToScreenCoordinates(
             position,
-            (err: any, coords: { x: number; y: number } | [number, number]) => {
+            (result: any) => {
               const el = document.getElementById(`marker-${id}`);
-              if (el && coords) {
-                // Sketchfab returns x, y where y is from bottom (sometimes as object, sometimes array)
-                const x = Array.isArray(coords) ? coords[0] : coords.x;
-                const y = Array.isArray(coords) ? coords[1] : coords.y;
+              // result is { canvasCoord: [x, y] } where origin is top-left
+              if (el && result && result.canvasCoord) {
+                const x = result.canvasCoord[0];
+                const y = result.canvasCoord[1];
                 el.style.left = `${x}px`;
-                el.style.bottom = `${y}px`;
+                el.style.top = `${y}px`;
+                el.style.bottom = "auto";
                 el.style.opacity = "1";
               }
             },
