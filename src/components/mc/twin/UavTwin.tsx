@@ -29,27 +29,45 @@ declare global {
 
 function AirspaceBackground() {
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden bg-[#070b14]">
+    <div className="absolute inset-0 z-0 overflow-hidden bg-[#0a0e17]">
+      {/* Yellow Axis Ticks (Top) */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[12px] pointer-events-none z-0"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(90deg, transparent, transparent 99px, rgba(234, 179, 8, 0.4) 99px, rgba(234, 179, 8, 0.4) 100px)",
+          borderBottom: "1px solid rgba(234, 179, 8, 0.2)",
+        }}
+      />
+      {/* Yellow Axis Ticks (Left) */}
+      <div
+        className="absolute top-0 left-0 bottom-0 w-[12px] pointer-events-none z-0"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(180deg, transparent, transparent 99px, rgba(234, 179, 8, 0.4) 99px, rgba(234, 179, 8, 0.4) 100px)",
+          borderRight: "1px solid rgba(234, 179, 8, 0.2)",
+        }}
+      />
+
       {/* 3D Perspective Grid Floor */}
       <div
-        className="absolute bottom-0 left-[-50%] w-[200%] h-[150%] opacity-40 pointer-events-none"
+        className="absolute bottom-[-20%] left-[-50%] w-[200%] h-[120%] opacity-50 pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(16, 185, 129, 0.5) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(16, 185, 129, 0.5) 1px, transparent 1px)
+            linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px)
           `,
           backgroundSize: "60px 60px",
           backgroundPosition: "center center",
-          transform:
-            "perspective(600px) rotateX(75deg) translateY(200px) translateZ(-200px)",
+          transform: "perspective(800px) rotateX(70deg) translateY(100px)",
           transformOrigin: "bottom center",
           maskImage:
-            "linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 80%)",
+            "linear-gradient(to top, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 80%)",
           WebkitMaskImage:
-            "linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 80%)",
+            "linear-gradient(to top, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 80%)",
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#070b14] via-[#070b14]/70 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-[#0a0e17]/60 to-transparent pointer-events-none" />
     </div>
   );
 }
