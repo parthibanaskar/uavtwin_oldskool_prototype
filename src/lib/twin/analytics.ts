@@ -966,27 +966,27 @@ export function evaluateAlerts(d: Derived): AlertCandidate[] {
   if (d.gpsErrorMetres > 45) {
     push({
       key: "gpsSpoof",
-        subsystem: "nav",
-        title: "GNSS spoofing suspected",
-        severity: d.gpsErrorMetres > 140 ? "critical" : "warning",
-        confidence: clamp01(0.5 + d.gpsErrorMetres / 400),
-        hotspot: "avionics",
-        contributions: [
-          contribution(
-            "gps",
-            "Position Error",
-            clamp01(d.gpsErrorMetres / 260) * 70,
-            `${d.gpsErrorMetres.toFixed(0)} m divergence`
-          ),
-          contribution(
-            "redundancy",
-            "Attitude Error",
-            40,
-            `${(d.gpsErrorMetres / 10).toFixed(1)}° induced roll`
-          ),
-        ],
-        narrative: `CRITICAL SECURITY ALERT: Foreign electronic warfare signals detected manipulating GNSS bands.\n\n? Root Cause: Malicious RF interference attempting to hijack positional awareness.\n? Physical Impact: Flight computer is aggressively banking (up to 45°) to chase a phantom coordinate. Path deviation is currently ${d.gpsErrorMetres.toFixed(1)} meters.\n? Action: Execute XAI fix immediately to switch to pure inertial/odometry navigation.`,
-        resolutionNarrative: `ACTION EXECUTED: Secure Nav Mode Engaged.\n\n? Mitigation: AI flight controller dynamically dropped the spoofed GNSS feed and fell back to dead-reckoning and secondary IMU sensors.\n? Outcome: Erroneous banking counteracted. The aircraft has returned to nominal flight path and leveled its attitude (0° roll).`,
+      subsystem: "nav",
+      title: "GNSS spoofing suspected",
+      severity: d.gpsErrorMetres > 140 ? "critical" : "warning",
+      confidence: clamp01(0.5 + d.gpsErrorMetres / 400),
+      hotspot: "avionics",
+      contributions: [
+        contribution(
+          "gps",
+          "Position Error",
+          clamp01(d.gpsErrorMetres / 260) * 70,
+          `${d.gpsErrorMetres.toFixed(0)} m divergence`,
+        ),
+        contribution(
+          "redundancy",
+          "Attitude Error",
+          40,
+          `${(d.gpsErrorMetres / 10).toFixed(1)}° induced roll`,
+        ),
+      ],
+      narrative: `CRITICAL SECURITY ALERT: Foreign electronic warfare signals detected manipulating GNSS bands.\n\n? Root Cause: Malicious RF interference attempting to hijack positional awareness.\n? Physical Impact: Flight computer is aggressively banking (up to 45°) to chase a phantom coordinate. Path deviation is currently ${d.gpsErrorMetres.toFixed(1)} meters.\n? Action: Execute XAI fix immediately to switch to pure inertial/odometry navigation.`,
+      resolutionNarrative: `ACTION EXECUTED: Secure Nav Mode Engaged.\n\n? Mitigation: AI flight controller dynamically dropped the spoofed GNSS feed and fell back to dead-reckoning and secondary IMU sensors.\n? Outcome: Erroneous banking counteracted. The aircraft has returned to nominal flight path and leveled its attitude (0° roll).`,
     });
   }
 
@@ -1124,7 +1124,7 @@ export function evaluateAlerts(d: Derived): AlertCandidate[] {
               "rpm",
               "RUL Margin",
               100,
-              `${(rulMargin / 60).toFixed(1)} mins`
+              `${(rulMargin / 60).toFixed(1)} mins`,
             ),
           ],
           narrative: `CRITICAL ADVISORY: Fault fixed, but Remaining Useful Life is dangerously close to remaining mission time. \n\n? Threat: A safety margin of +20 mins is required. Current margin is only ${(rulMargin / 60).toFixed(1)} mins.\n? Action: Proceed with extreme caution or divert immediately to the nearest safe landing site.`,

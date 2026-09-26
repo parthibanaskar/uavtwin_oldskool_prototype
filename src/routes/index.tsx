@@ -60,7 +60,9 @@ function TwinPanel() {
       subtitle="LIVE SENSOR FUSION & FLIGHT TELEMETRY"
       right={
         <Chip tone="info">
-          {sourceKind === "simulated" ? "DATALINK: SIMULATED" : "DATALINK: LIVE"}
+          {sourceKind === "simulated"
+            ? "DATALINK: SIMULATED"
+            : "DATALINK: LIVE"}
         </Chip>
       }
       className="h-[26rem] shrink-0"
@@ -93,9 +95,11 @@ function TwinPanel() {
             <div>
               <p className="label-xs text-muted-foreground">COORDINATES</p>
               <p className="font-mono text-[0.8rem] leading-tight">
-                {Math.abs(displayed.sample.gps.lat).toFixed(4)}° {displayed.sample.gps.lat >= 0 ? 'N' : 'S'}
+                {Math.abs(displayed.sample.gps.lat).toFixed(4)}°{" "}
+                {displayed.sample.gps.lat >= 0 ? "N" : "S"}
                 <br />
-                {Math.abs(displayed.sample.gps.lon).toFixed(4)}° {displayed.sample.gps.lon >= 0 ? 'E' : 'W'}
+                {Math.abs(displayed.sample.gps.lon).toFixed(4)}°{" "}
+                {displayed.sample.gps.lon >= 0 ? "E" : "W"}
               </p>
             </div>
             <div>
@@ -107,14 +111,17 @@ function TwinPanel() {
             <div>
               <p className="label-xs text-muted-foreground">PHASE</p>
               <p className="font-mono text-[0.8rem] uppercase">
-                {displayed.sample.profile.replace('_', ' ')}
+                {displayed.sample.profile.replace("_", " ")}
               </p>
             </div>
           </div>
         ) : null}
-        
+
         {displayed?.sample && (
-          <WeatherWidget lat={displayed.sample.gps.lat} lon={displayed.sample.gps.lon} />
+          <WeatherWidget
+            lat={displayed.sample.gps.lat}
+            lon={displayed.sample.gps.lon}
+          />
         )}
       </div>
     </Panel>

@@ -298,7 +298,8 @@ export class SimulatedTelemetrySource implements TelemetrySource {
       // Faults were fixed. Recover slightly to ~75-80 mins, but no more.
       if (this.simulatedRulSeconds < 78 * 60) {
         this.simulatedRulSeconds += dt * 50; // fast recovery to 78 mins
-        if (this.simulatedRulSeconds > 78 * 60) this.simulatedRulSeconds = 78 * 60;
+        if (this.simulatedRulSeconds > 78 * 60)
+          this.simulatedRulSeconds = 78 * 60;
       }
     }
 
@@ -384,8 +385,12 @@ export class SimulatedTelemetrySource implements TelemetrySource {
         fatigue_crack_m: this.fatigueCrackMeters,
         rul_seconds,
         gpsSpoofed: spoofCheck.spoofed,
-        pitch_deg: Math.cos(this.t * 0.3) * 0.5 + (spoof > 0.1 ? spoof * 25 * Math.sin(this.t * 2.1) : 0),
-        roll_deg: Math.sin(this.t * 0.5) * 1.5 + (spoof > 0.1 ? spoof * 45 * Math.sin(this.t * 1.7) : 0),
+        pitch_deg:
+          Math.cos(this.t * 0.3) * 0.5 +
+          (spoof > 0.1 ? spoof * 25 * Math.sin(this.t * 2.1) : 0),
+        roll_deg:
+          Math.sin(this.t * 0.5) * 1.5 +
+          (spoof > 0.1 ? spoof * 45 * Math.sin(this.t * 1.7) : 0),
         altitude_ft: currentAlt,
         mission_distance_km: this.isDiverting
           ? Math.max(0, 4.0 - (this.t - this.divertStartT) * 0.046)
@@ -566,8 +571,8 @@ export class HardwareTelemetrySource implements TelemetrySource {
             throttle_reduction: data.physics?.throttle_reduction ?? 1.0,
             altitude_ft: data.physics?.altitude_ft ?? 2000,
             gpsSpoofed: data.physics?.gpsSpoofed ?? false,
-              pitch_deg: data.physics?.pitch_deg ?? 0,
-              roll_deg: data.physics?.roll_deg ?? 0,
+            pitch_deg: data.physics?.pitch_deg ?? 0,
+            roll_deg: data.physics?.roll_deg ?? 0,
           },
         };
 

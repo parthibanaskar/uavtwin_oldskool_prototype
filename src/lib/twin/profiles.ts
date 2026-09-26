@@ -259,7 +259,7 @@ export const SCENARIOS: Scenario[] = [
     rampSeconds: 1,
     description:
       "External interference introduces a 2km lateral bias to GNSS coordinates.",
-  },,
+  },
   {
     key: "sensorDrift",
     label: "EGT Sensor Drift",
@@ -267,7 +267,8 @@ export const SCENARIOS: Scenario[] = [
     severity: "advisory",
     hotspot: "hotSection",
     rampSeconds: 2,
-    description: "Thermal fatigue causes the primary EGT thermocouple to drift slowly, risking ECU miscalculation."
+    description:
+      "Thermal fatigue causes the primary EGT thermocouple to drift slowly, risking ECU miscalculation.",
   },
   {
     key: "propImbalance",
@@ -276,7 +277,8 @@ export const SCENARIOS: Scenario[] = [
     severity: "warning",
     hotspot: "propeller",
     rampSeconds: 3,
-    description: "Ice buildup on the blade roots introduces a 1x rotational imbalance, increasing shaft fatigue."
+    description:
+      "Ice buildup on the blade roots introduces a 1x rotational imbalance, increasing shaft fatigue.",
   },
   {
     key: "busSag",
@@ -285,7 +287,8 @@ export const SCENARIOS: Scenario[] = [
     severity: "advisory",
     hotspot: "electrical",
     rampSeconds: 1.5,
-    description: "Brushes wear out, causing main bus voltage to sag under load. Avionics switch to secondary regulation."
+    description:
+      "Brushes wear out, causing main bus voltage to sag under load. Avionics switch to secondary regulation.",
   },
   {
     key: "icing",
@@ -294,8 +297,9 @@ export const SCENARIOS: Scenario[] = [
     severity: "warning",
     hotspot: "propeller",
     rampSeconds: 3,
-    description: "Leading edge ice accumulation drags RPM and forces the engine to run hotter to maintain thrust."
-  }
+    description:
+      "Leading edge ice accumulation drags RPM and forces the engine to run hotter to maintain thrust.",
+  },
 ];
 
 export const SCENARIO_BY_KEY: Record<string, Scenario> = Object.fromEntries(

@@ -89,7 +89,10 @@ export function ScenarioControls() {
           </button>
           <div className="mx-1 h-3 w-px bg-border"></div>
           <button
-            onClick={() => { setExpanded(!expanded); setShowHint(false); }}
+            onClick={() => {
+              setExpanded(!expanded);
+              setShowHint(false);
+            }}
             className="inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1 font-mono text-[0.65rem] uppercase transition-colors hover:bg-accent"
             title={expanded ? "Collapse" : "Expand"}
           >
