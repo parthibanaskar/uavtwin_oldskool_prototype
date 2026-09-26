@@ -69,7 +69,7 @@ function TwinPanel() {
         <UavTwin />
       </div>
       <div className="pointer-events-none absolute inset-x-2 bottom-2 flex flex-wrap items-end justify-between gap-2">
-        {hotspot && value !== null && (
+        {hotspot && value !== null ? (
           <div className="panel-surface pointer-events-auto max-w-[19rem] p-2">
             <p className="label-xs">{hotspot.subsystem} subsystem</p>
             <p className="text-sm font-semibold">{hotspot.label}</p>
@@ -87,7 +87,30 @@ function TwinPanel() {
               {hotspotRul === null ? "stable" : `${hotspotRul.toFixed(0)} min`}
             </p>
           </div>
-        )}
+        ) : displayed?.sample ? (
+          <div className="panel-surface pointer-events-auto p-2 flex gap-6">
+            <div>
+              <p className="label-xs text-muted-foreground">COORDINATES</p>
+              <p className="font-mono text-[0.8rem] leading-tight">
+                {Math.abs(displayed.sample.gps.lat).toFixed(4)}° {displayed.sample.gps.lat >= 0 ? 'N' : 'S'}
+                <br />
+                {Math.abs(displayed.sample.gps.lon).toFixed(4)}° {displayed.sample.gps.lon >= 0 ? 'E' : 'W'}
+              </p>
+            </div>
+            <div>
+              <p className="label-xs text-muted-foreground">GPS</p>
+              <p className="font-mono text-[0.8rem] text-ok">
+                {displayed.sample.gpsSats} SATS
+              </p>
+            </div>
+            <div>
+              <p className="label-xs text-muted-foreground">PHASE</p>
+              <p className="font-mono text-[0.8rem] uppercase">
+                {displayed.sample.profile.replace('_', ' ')}
+              </p>
+            </div>
+          </div>
+        ) : null}
       </div>
     </Panel>
   );
