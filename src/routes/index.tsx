@@ -101,44 +101,51 @@ function FooterReplayBar() {
   );
 }
 
-function MissionControl() {
+function MissionDashboard() {
+  const { missionId } = useMission();
   return (
-    <MissionProvider>
-      <main className="flex h-screen flex-col gap-2 overflow-hidden p-2">
-        <TopBar />
-        <MasterAlarmBanner />
-        <PostFlightReview />
-        <FixProgressModal />
+    <main className="flex h-screen flex-col gap-2 overflow-hidden p-2">
+      <TopBar />
+      <MasterAlarmBanner />
+      <PostFlightReview />
+      <FixProgressModal />
 
-        <div className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)_minmax(0,23rem)]">
-          <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-0.5 [&>section]:shrink-0">
-            <ParamGrid />
-            <PhysicsPanel />
-            <TrendChart />
-            <SpectrumPanel />
-            <RedundancyPanel />
-          </div>
+      <div className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)_minmax(0,23rem)]">
+        <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-0.5 [&>section]:shrink-0">
+          <ParamGrid />
+          <PhysicsPanel />
+          <TrendChart />
+          <SpectrumPanel />
+          <RedundancyPanel />
+        </div>
 
-          <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-0.5 [&_section]:shrink-0">
-            <TwinPanel />
-            <div className="grid shrink-0 gap-2 md:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <SafeLanding />
-                <ThreatAssessment />
-              </div>
-              <BlackBoxPanel />
+        <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-0.5 [&_section]:shrink-0">
+          <TwinPanel />
+          <div className="grid shrink-0 gap-2 md:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <SafeLanding key={missionId} />
+              <ThreatAssessment />
             </div>
-          </div>
-
-          <div className="flex min-h-0 flex-col gap-2 overflow-hidden">
-            <AlertFeed className="flex-1 min-h-0" />
+            <BlackBoxPanel key={missionId} />
           </div>
         </div>
 
-        <ScenarioControls />
+        <div className="flex min-h-0 flex-col gap-2 overflow-hidden">
+          <AlertFeed className="flex-1 min-h-0" key={missionId} />
+        </div>
+      </div>
 
-        <FooterReplayBar />
-      </main>
+      <ScenarioControls />
+
+      <FooterReplayBar />
+    </main>
+  );
+}
+
+function MissionControl() {
+  return (
+    <MissionProvider>
+      <MissionDashboard />
     </MissionProvider>
   );
 }

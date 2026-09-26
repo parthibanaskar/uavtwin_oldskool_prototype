@@ -471,6 +471,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     setSilentlyResolvedAlerts(new Set());
     setHealActions([]);
     setAlerts([]);
+    setRul({});
     healthHistory.current = {};
     activeAlertKeys.current.clear();
     alertCooldowns.current.clear();

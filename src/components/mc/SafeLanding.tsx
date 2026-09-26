@@ -13,22 +13,16 @@ import { Chip, Panel } from "./primitives";
 import { cn } from "@/lib/utils";
 
 function LandingCameraSequence({ siteName }: { siteName: string }) {
-  const [alt, setAlt] = useState(1500);
+  const [alt, setAlt] = useState(500);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setAlt((a) => {
-        if (a <= 0) {
-          clearInterval(interval);
-          return 0;
-        }
-        return Math.max(0, a - Math.floor(Math.random() * 80 + 20));
-      });
-    }, 100);
+      setAlt((a) => Math.max(0, a - Math.floor(Math.random() * 3 + 10)));
+    }, 200);
     return () => clearInterval(interval);
   }, []);
 
-  const scale = Math.max(1, 2000 / (alt + 50));
+  const scale = Math.max(1, 600 / (alt + 50));
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[190px] rounded-sm border border-emerald-500/30 bg-[#0a101d] overflow-hidden font-mono flex flex-col mb-4">
