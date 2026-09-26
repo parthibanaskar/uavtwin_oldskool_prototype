@@ -1,173 +1,237 @@
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, Html, Lightformer, OrbitControls, useGLTF } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import * as THREE from "three";
-
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMission } from "@/lib/twin/store";
 import { HOTSPOTS } from "@/lib/twin/profiles";
 import { healthTone } from "../primitives";
 
-const TONE_HEX = { ok: "#2fd39a", warn: "#f2c14e", crit: "#ef4444" } as const;
+const MODEL_UID = "67703aedf76945ce872fc576be6a4321";
 
-/** Hotspot anchor points on the procedural airframe (metres, model space). */
-const HOTSPOT_POS: Record<string, [number, number, number]> = {
-  propeller: [-2.02, 0.11, -0.46],
-  bearing: [0.66, 0.04, -0.09],
-  hotSection: [1.38, -0.17, -0.13],
-  cylinder: [1.15, 0.15, -0.1], // Roughly between bearing and hotSection
-  oilSystem: [0.93, 0.17, -0.16],
-  fuelSystem: [-0.3, -0.37, 0.19],
-  electrical: [-1.22, -0.37, 0.11],
-  avionics: [2.58, 0.13, 0.2],
+const ANNOTATIONS = [
+  { id: 2, position: [-2.02, 0.11, -0.46], eye: [-2.72, 3.86, -5.92] },
+  { id: 5, position: [0.66, 0.04, -0.09], eye: [-0.64, 4.25, -6.07] },
+  { id: 4, position: [1.38, -0.17, -0.13], eye: [0.93, 2.92, -6.64] },
+  { id: 6, position: [0.93, 0.17, -0.16], eye: [0.85, 4.41, -5.92] },
+  { id: 7, position: [-0.3, -0.37, 0.19], eye: [-1.43, -0.58, 7.2] },
+  { id: 8, position: [-1.22, -0.37, 0.11], eye: [-1.86, -0.99, 7.15] },
+  { id: 10, position: [2.58, 0.13, 0.2], eye: [2.51, 3.99, 6.13] },
+];
+
+const TONE_HEX: Record<string, string> = {
+  nominal: "#10b981",
+  warning: "#f59e0b",
+  critical: "#ef4444",
 };
 
-function GlbAirframe({ rpm, vibration }: { rpm: number; vibration: number }) {
-  const { scene } = useGLTF("/models/uav.glb");
-  const droneRef = useRef<THREE.Group>(null);
-  const propRef = useRef<THREE.Object3D | null>(null);
-
-  useEffect(() => {
-    scene.traverse((child) => {
-      const name = child.name.toLowerCase();
-      if (name.includes("prop") || name.includes("rotor") || name.includes("blade")) {
-        propRef.current = child;
-      }
-    });
-  }, [scene]);
-
-  useFrame((state, delta) => {
-    if (propRef.current) {
-      propRef.current.rotation.z += (rpm / 60) * delta * 20;
-      propRef.current.rotation.x += (rpm / 60) * delta * 20;
-    }
-    if (droneRef.current) {
-      const t = state.clock.getElapsedTime();
-      const bank = Math.sin(t * 0.5) * 0.05;
-      const pitch = Math.cos(t * 0.3) * 0.02;
-      const shakeAmt = Math.max(0, vibration - 20) * 0.002;
-      const shakeX = (Math.random() - 0.5) * shakeAmt;
-      const shakeY = (Math.random() - 0.5) * shakeAmt;
-      const shakeZ = (Math.random() - 0.5) * shakeAmt;
-      
-      droneRef.current.rotation.z = THREE.MathUtils.lerp(droneRef.current.rotation.z, bank, 0.1);
-      droneRef.current.rotation.x = THREE.MathUtils.lerp(droneRef.current.rotation.x, pitch, 0.1);
-      droneRef.current.position.set(shakeX, shakeY, shakeZ);
-    }
-  });
-
-  return (
-    <group ref={droneRef} scale={1.2}>
-      {/* 
-        The Sketchfab model coordinates might be slightly off due to orientation differences.
-        Usually GLTF models need some rotation to match the world axes correctly.
-        We'll just render it here, the user can orbit around it.
-      */}
-      <primitive object={scene} />
-    </group>
-  );
+declare global {
+  interface Window {
+    Sketchfab: any;
+  }
 }
 
-function Hotspot({
-  id,
-  value,
-  active,
-  onSelect,
-}: {
-  id: string;
-  value: number;
-  active: boolean;
-  onSelect: (id: string | null) => void;
-}) {
-  const ring = useRef<THREE.Mesh>(null);
-  const tone = healthTone(value);
-  const color = TONE_HEX[tone];
-  const pos = HOTSPOT_POS[id] ?? [0, 0, 0];
-  const [hover, setHover] = useState(false);
-
-  useFrame((state) => {
-    if (!ring.current) return;
-    const pulse = tone === "ok" ? 1 : 1 + Math.sin(state.clock.elapsedTime * 5) * 0.22;
-    ring.current.scale.setScalar(pulse);
-  });
-
+function AirspaceBackground() {
   return (
-    <group position={pos}>
-      <mesh
-        ref={ring}
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          setHover(true);
+    <div className="absolute inset-0 z-0 overflow-hidden bg-[#0a0e17]">
+      {/* 2D Flat Graph Grid */}
+      <div
+        className="absolute inset-0 opacity-20 pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px)
+          `,
+          backgroundSize: "100px 100px",
+          backgroundPosition: "0 0",
         }}
-        onPointerOut={() => setHover(false)}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect(active ? null : id);
+      />
+      {/* Yellow Axis Ticks (Top) */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-[12px] pointer-events-none z-0"
+        style={{
+          backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 99px, rgba(234, 179, 8, 0.5) 99px, rgba(234, 179, 8, 0.5) 100px)",
+          borderBottom: "1px solid rgba(234, 179, 8, 0.3)"
         }}
-      >
-        <sphereGeometry args={[0.13, 16, 12]} />
-        <meshBasicMaterial color={color} transparent opacity={active || hover ? 0.95 : 0.6} />
-      </mesh>
-      {(hover || active) && (
-        <Html center distanceFactor={9} position={[0, 0.3, 0]}>
-          <div className="pointer-events-none rounded-sm border border-border bg-card/95 px-2 py-1 text-center whitespace-nowrap">
-            <p className="label-xs">{HOTSPOTS[id]?.label ?? id}</p>
-            <p className="font-mono text-xs" style={{ color }}>
-              {value}/100
-            </p>
-          </div>
-        </Html>
-      )}
-    </group>
+      />
+      {/* Yellow Axis Ticks (Left) */}
+      <div 
+        className="absolute top-0 left-0 bottom-0 w-[12px] pointer-events-none z-0"
+        style={{
+          backgroundImage: "repeating-linear-gradient(180deg, transparent, transparent 99px, rgba(234, 179, 8, 0.5) 99px, rgba(234, 179, 8, 0.5) 100px)",
+          borderRight: "1px solid rgba(234, 179, 8, 0.3)"
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-[#0a0e17]/30 to-transparent pointer-events-none" />
+    </div>
   );
 }
-
-
 
 export function UavTwin() {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const apiRef = useRef<any>(null);
+
   const { displayed, focusHotspot, setFocusHotspot } = useMission();
+  const [ready, setReady] = useState(false);
+  const idxToId = useRef<Record<number, string>>({});
 
   const health = displayed?.health;
+  const stateRef = useRef(displayed);
+
+  useEffect(() => {
+    stateRef.current = displayed;
+  }, [displayed]);
+
+  const initViewer = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe || !window.Sketchfab) return;
+
+    if (apiRef.current) return;
+
+    const client = new window.Sketchfab(iframe);
+    client.init(MODEL_UID, {
+      success: (api: any) => {
+        apiRef.current = api;
+        api.start();
+        api.addEventListener("viewerready", () => {
+          api.setAnnotationCameraTransition(false);
+          api.showAnnotationTooltips(false);
+          api.setFov(65);
+
+          api.pause();
+          api.seekTo(0);
+          setTimeout(() => setReady(true), 1500);
+        });
+      },
+      error: () => {
+        console.error("Viewer error");
+        setReady(true);
+      },
+      ui_animations: 0,
+      animation_autoplay: 0,
+      ui_controls: 1, // Crucial: Re-enable free 3D orbiting for the user!
+      ui_infos: 0,
+      ui_watermark: 0,
+      ui_annotations: 1,
+      autostart: 1,
+      preload: 1,
+      camera: 0,
+      transparent: 1, // Leaves Sketchfab background transparent so our CSS gradient shows
+    });
+  }, [setFocusHotspot]);
+
+  useEffect(() => {
+    const failsafe = setTimeout(() => setReady(true), 5000);
+
+    if (document.getElementById("sf-sdk")) {
+      if (window.Sketchfab && !apiRef.current) initViewer();
+      return () => clearTimeout(failsafe);
+    }
+    const s = document.createElement("script");
+    s.id = "sf-sdk";
+    s.src = "https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js";
+    s.onload = () => initViewer();
+    document.head.appendChild(s);
+
+    return () => clearTimeout(failsafe);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let timer: number;
+    let trackTimer: number;
+
+    const tick = () => {
+      timer = requestAnimationFrame(tick);
+
+      const state = stateRef.current;
+      const vib = state?.trustedVibration ?? 0;
+      const rpm = state?.sample.params.rpm ?? 0;
+      const t = performance.now() / 1000;
+
+      const bank = Math.sin(t * 0.5) * 1.5;
+      const pitch = Math.cos(t * 0.3) * 0.5;
+
+      const shakeAmt = Math.max(0, vib - 20) * 0.08;
+      const shakeX = (Math.random() - 0.5) * shakeAmt;
+      const shakeY = (Math.random() - 0.5) * shakeAmt;
+
+      if (wrapperRef.current) {
+        wrapperRef.current.style.transform = `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`;
+      }
+    };
+
+    // Update native Sketchfab annotations based on REDUX state
+    trackTimer = window.setInterval(() => {
+      const api = apiRef.current;
+      const state = stateRef.current;
+      if (!api || !state || !state.health) return;
+
+      ANNOTATIONS.forEach(({ id }) => {
+        // Find which subsystem this matches (heuristic mapping for native IDs)
+        let subsystemKey = "engine";
+        let title = "Component";
+        if (id === 2) { subsystemKey = "vibration"; title = "Propeller & Hub"; }
+        if (id === 5) { subsystemKey = "propulsion"; title = "Electric Motor"; }
+        if (id === 4) { subsystemKey = "engine"; title = "Hot Section / Exhaust"; }
+        if (id === 6) { subsystemKey = "lubrication"; title = "Oil Pump & Gallery"; }
+        if (id === 7) { subsystemKey = "fuel"; title = "Fuel Pump & Lines"; }
+        if (id === 8) { subsystemKey = "electrical"; title = "Generator & Bus"; }
+        if (id === 10) { subsystemKey = "nav"; title = "Nav / GNSS Bay"; }
+
+        const val = state.health.subsystems[subsystemKey] ?? 100;
+        const tone = healthTone(val).toUpperCase();
+        
+        api.updateAnnotation(id, {
+          title: title,
+          content: `Health: ${val.toFixed(0)}% [${tone}]`
+        });
+      });
+    }, 500);
+
+    timer = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(timer);
+      clearInterval(trackTimer);
+    };
+  }, []);
 
   return (
-    <Canvas shadows camera={{ position: [4.2, 2.6, 5.4], fov: 46 }} dpr={[1, 1.8]}>
-      <color attach="background" args={["#101720"]} />
-      <fog attach="fog" args={["#101720", 12, 34]} />
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[6, 9, 5]} intensity={1.5} castShadow />
-      <Environment>
-        <Lightformer intensity={1.6} position={[0, 6, 2]} scale={[10, 10, 1]} />
-        <Lightformer
-          intensity={0.9}
-          color="#7fd8e8"
-          position={[-6, 1, -2]}
-          rotation-y={Math.PI / 2}
-          scale={[18, 2, 1]}
+    <div
+      className="absolute inset-0 overflow-hidden flex flex-col bg-[#020813]"
+      style={{ perspective: "1000px" }}
+    >
+      <AirspaceBackground />
+
+      <div
+        ref={wrapperRef}
+        className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center z-10"
+      >
+        <iframe
+          ref={iframeRef}
+          title="UAV Digital Twin"
+          allow="autoplay; fullscreen; xr-spatial-tracking"
+          className="w-full h-full border-0 outline-none"
         />
-      </Environment>
-      <gridHelper args={[26, 26, "#26313d", "#1b232c"]} position={[0, -1.4, 0]} />
-      <Suspense fallback={null}>
-        <GlbAirframe
-          rpm={displayed?.sample.params.rpm ?? 0}
-          vibration={displayed?.trustedVibration ?? 0}
-        />
-      </Suspense>
-      {Object.keys(HOTSPOT_POS).map((id) => (
-        <Hotspot
-          key={id}
-          id={id}
-          value={health ? health.subsystems[HOTSPOTS[id]!.subsystem] : 100}
-          active={focusHotspot === id}
-          onSelect={setFocusHotspot}
-        />
-      ))}
-      <OrbitControls
-        enablePan={false}
-        minDistance={3.5}
-        maxDistance={12}
-        target={[0, 0, 0.4]}
-        autoRotate={!focusHotspot}
-        autoRotateSpeed={0.35}
-      />
-    </Canvas>
+      </div>
+
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#030712] transition-opacity duration-1000 pointer-events-none"
+        style={{
+          opacity: ready ? 0 : 1,
+        }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+          <div className="text-center">
+            <h3 className="text-sm font-bold tracking-widest text-emerald-500 mb-1">
+              VAYUTWIN ENGINE
+            </h3>
+            <p className="text-xs text-emerald-500/50 animate-pulse">
+              Establishing secure link to 3D asset...
+            </p>
+          </div>
+        </div>
+      </div>
+
+      </div>
   );
 }
