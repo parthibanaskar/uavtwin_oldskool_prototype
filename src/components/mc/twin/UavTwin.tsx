@@ -55,12 +55,15 @@ function RealisticBackground() {
         { maxZoom: 19 },
       ).addTo(map);
 
+      // Force Leaflet to recalculate bounds after mounting in the massive CSS container
+      setTimeout(() => {
+        if (map) map.invalidateSize(true);
+      }, 500);
+
       let lng = -117.88;
       let lat = 34.9;
 
       interval = setInterval(() => {
-        // Pan map south continuously so ground appears to move down relative to container.
-        // This creates forward flight illusion for a drone pointing UP.
         lat -= 0.00004;
         if (map) {
           map.panTo([lat, lng], {
@@ -138,9 +141,26 @@ export function UavTwin() {
           api.seekTo(0);
           api.setFov(65);
 
-          // Force perfect top-down view (camera on +Z axis looking at origin)
-          // The slight -0.01 on Y prevents gimbal lock
-          api.setCameraLookAt([0, -0.01, 22], [0, 0, 0], 0);
+          // Dynamically fetch the model's native camera distance so it never clips/disappears
+          api.getCameraLookAt((err: any, camera: any) => {
+            if (!err && camera) {
+              const dx = camera.position[0] - camera.target[0];
+              const dy = camera.position[1] - camera.target[1];
+              const dz = camera.position[2] - camera.target[2];
+              const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+              // Force camera straight up along +Z, keeping the exact native bounding distance
+              api.setCameraLookAt(
+                [
+                  camera.target[0],
+                  camera.target[1] - 0.01,
+                  camera.target[2] + dist,
+                ],
+                camera.target,
+                0,
+              );
+            }
+          });
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
             const label = HOTSPOTS[id]?.label ?? id;
@@ -249,10 +269,15 @@ export function UavTwin() {
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
     >
-      {/* Massive spinning background to prevent edges from showing during rotation */}
       <div
-        className="absolute top-1/2 left-1/2 w-[250vw] h-[250vh] -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none"
-        style={{ transform: `translate(-50%, -50%) rotate(${heading}deg)` }}
+        className="absolute z-0 pointer-events-none transition-transform duration-75"
+        style={{
+          top: "50%",
+          left: "50%",
+          width: "200vw",
+          height: "200vh",
+          transform: `translate(-50%, -50%) rotate(${heading}deg)`,
+        }}
       >
         <RealisticBackground />
       </div>
