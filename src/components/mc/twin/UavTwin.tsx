@@ -78,28 +78,6 @@ export function UavTwin() {
 
           api.pause();
           api.seekTo(0);
-
-          ANNOTATIONS.forEach(({ id, position, eye }) => {
-            const label = HOTSPOTS[id]?.label ?? id;
-            api.addAnnotation(
-              position,
-              eye,
-              label,
-              "",
-              (_err: any, idx: number) => {
-                idxToId.current[idx] = id;
-              },
-            );
-          });
-
-          api.addEventListener("annotationSelect", (idx: number) => {
-            const id = idxToId.current[idx];
-            if (id) setFocusHotspot(id);
-          });
-          api.addEventListener("annotationUnselect", () =>
-            setFocusHotspot(null),
-          );
-
           setTimeout(() => setReady(true), 1500);
         });
       },
@@ -112,7 +90,7 @@ export function UavTwin() {
       ui_controls: 1, // Crucial: Re-enable free 3D orbiting for the user!
       ui_infos: 0,
       ui_watermark: 0,
-      ui_annotations: 1,
+      ui_annotations: 0,
       autostart: 1,
       preload: 1,
       camera: 0,
@@ -139,6 +117,8 @@ export function UavTwin() {
 
   useEffect(() => {
     let timer: number;
+    let trackTimer: number;
+
     const tick = () => {
       timer = requestAnimationFrame(tick);
 
@@ -158,8 +138,31 @@ export function UavTwin() {
         wrapperRef.current.style.transform = `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`;
       }
     };
+
+    // Poll the 3D-to-2D coordinates of the annotations at ~30 FPS
+    trackTimer = window.setInterval(() => {
+      if (!apiRef.current) return;
+      ANNOTATIONS.forEach(({ id, position }) => {
+        apiRef.current.getWorldToWindowCoordinates(
+          position,
+          (err: any, coords: [number, number]) => {
+            const el = document.getElementById(`marker-${id}`);
+            if (el && coords && coords.length === 2) {
+              el.style.left = `${coords[0]}px`;
+              el.style.top = `${coords[1]}px`;
+              el.style.opacity = "1";
+            }
+          },
+        );
+      });
+    }, 33);
+
     timer = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(timer);
+
+    return () => {
+      cancelAnimationFrame(timer);
+      clearInterval(trackTimer);
+    };
   }, []);
 
   return (
@@ -200,38 +203,61 @@ export function UavTwin() {
         </div>
       </div>
 
-      {ready && (
-        <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 pointer-events-none z-20">
-          {ANNOTATIONS.map(({ id }) => {
-            const subsystem = HOTSPOTS[id]?.subsystem;
-            const val =
-              subsystem && health ? (health.subsystems[subsystem] ?? 100) : 100;
-            const tone = healthTone(val);
-            const color = TONE_HEX[tone] || TONE_HEX.nominal;
-            const isActive = focusHotspot === id;
-            return (
-              <button
-                key={id}
-                className="pointer-events-auto flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-all"
+      {/* Custom 3D Tracking Markers */}
+      {ready &&
+        ANNOTATIONS.map(({ id }) => {
+          const info = HOTSPOTS[id];
+          const subsystem = info?.subsystem;
+          const val =
+            subsystem && health ? (health.subsystems[subsystem] ?? 100) : 100;
+          const tone = healthTone(val);
+          const color = TONE_HEX[tone] || TONE_HEX.nominal;
+          const isActive = focusHotspot === id;
+
+          return (
+            <div
+              key={id}
+              id={`marker-${id}`}
+              className="absolute pointer-events-auto cursor-pointer group flex flex-col items-center justify-center z-20"
+              style={{
+                opacity: 0,
+                transform: "translate(-50%, -50%)",
+                transition: "opacity 0.2s ease-in-out",
+              }}
+              onMouseEnter={() => setFocusHotspot(id)}
+              onMouseLeave={() => setFocusHotspot(null)}
+              onClick={() => {
+                if (apiRef.current) {
+                  const pos = ANNOTATIONS.find((a) => a.id === id)?.position;
+                  const eye = ANNOTATIONS.find((a) => a.id === id)?.eye;
+                  if (pos && eye) apiRef.current.setCameraLookAt(eye, pos, 1);
+                }
+              }}
+            >
+              {/* Outer Glow Ring */}
+              <div
+                className="absolute inset-[-4px] rounded-full animate-ping opacity-30"
+                style={{ backgroundColor: color }}
+              />
+              {/* Inner Dot */}
+              <div
+                className="w-4 h-4 rounded-full border border-white/50 shadow-[0_0_10px_rgba(0,0,0,0.8)] relative z-10 transition-colors"
                 style={{
-                  borderColor: color,
-                  backgroundColor: isActive ? color + "33" : "#030712cc",
-                  color: color,
-                  boxShadow: isActive ? `0 0 8px ${color}66` : "none",
+                  backgroundColor: color,
+                  boxShadow: `0 0 10px ${color}`,
                 }}
-                onClick={() => setFocusHotspot(isActive ? null : id)}
+              />
+              {/* Hover Label */}
+              <div
+                className={`absolute top-5 px-2 py-0.5 rounded-sm bg-black/80 border text-[10px] font-mono whitespace-nowrap transition-opacity pointer-events-none ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                style={{ borderColor: color, color: color }}
               >
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-                {HOTSPOTS[id]?.label ?? id}
-                <span className="opacity-70">{val}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+                {info?.label ?? id}{" "}
+                <span className="text-white/70">[{val.toFixed(0)}]</span>
+              </div>
+            </div>
+          );
+        })}
     </div>
   );
 }
