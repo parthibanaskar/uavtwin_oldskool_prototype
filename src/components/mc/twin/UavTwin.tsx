@@ -288,41 +288,10 @@ function Hotspot({
   );
 }
 
-function GlbAirframe({ url }: { url: string }) {
-  const [Comp, setComp] = useState<React.ComponentType | null>(null);
-  useEffect(() => {
-    let alive = true;
-    void (async () => {
-      const { useGLTF } = await import("@react-three/drei");
-      if (!alive) return;
-      const Model = () => {
-        const gltf = useGLTF(url);
-        return <primitive object={gltf.scene} />;
-      };
-      setComp(() => Model);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [url]);
-  return Comp ? <Comp /> : null;
-}
+
 
 export function UavTwin() {
   const { displayed, focusHotspot, setFocusHotspot } = useMission();
-  const [hasModel, setHasModel] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    void fetch("/models/uav.glb", { method: "HEAD" })
-      .then((r) => {
-        if (alive && r.ok) setHasModel(true);
-      })
-      .catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   const health = displayed?.health;
 
@@ -344,14 +313,10 @@ export function UavTwin() {
       </Environment>
       <gridHelper args={[26, 26, "#26313d", "#1b232c"]} position={[0, -1.4, 0]} />
       <Suspense fallback={null}>
-        {hasModel ? (
-          <GlbAirframe url="/models/uav.glb" />
-        ) : (
-          <Airframe
-            rpm={displayed?.sample.params.rpm ?? 0}
-            vibration={displayed?.trustedVibration ?? 0}
-          />
-        )}
+        <Airframe
+          rpm={displayed?.sample.params.rpm ?? 0}
+          vibration={displayed?.trustedVibration ?? 0}
+        />
       </Suspense>
       {Object.keys(HOTSPOT_POS).map((id) => (
         <Hotspot
