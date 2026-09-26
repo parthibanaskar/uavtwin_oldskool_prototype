@@ -24,7 +24,7 @@ const TONE_HEX: Record<string, string> = {
 declare global {
   interface Window {
     Sketchfab: any;
-    L: any; // Leaflet
+    L: any;
   }
 }
 
@@ -38,10 +38,9 @@ function RealisticBackground() {
     const initMap = () => {
       if (!window.L || !mapRef.current) return;
 
-      // Initialize map over the desert (Edwards AFB region)
       map = window.L.map(mapRef.current, {
         center: [34.9, -117.88],
-        zoom: 15,
+        zoom: 16,
         zoomControl: false,
         attributionControl: false,
         dragging: false,
@@ -51,7 +50,6 @@ function RealisticBackground() {
         keyboard: false,
       });
 
-      // Esri World Imagery (Free, photorealistic satellite map, no API key required)
       window.L.tileLayer(
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         { maxZoom: 19 },
@@ -60,9 +58,10 @@ function RealisticBackground() {
       let lng = -117.88;
       let lat = 34.9;
 
-      // Continuously pan the map to simulate the drone flying
       interval = setInterval(() => {
-        lng -= 0.00005; // Fly west slowly
+        // Pan map south continuously so ground appears to move down relative to container.
+        // This creates forward flight illusion for a drone pointing UP.
+        lat -= 0.00004;
         if (map) {
           map.panTo([lat, lng], {
             animate: true,
@@ -110,6 +109,9 @@ export function UavTwin() {
   const [ready, setReady] = useState(false);
   const idxToId = useRef<Record<number, string>>({});
 
+  const [heading, setHeading] = useState(0);
+  const dragRef = useRef({ isDragging: false, lastX: 0 });
+
   const health = displayed?.health;
   const stateRef = useRef(displayed);
 
@@ -132,13 +134,13 @@ export function UavTwin() {
           api.setAnnotationCameraTransition(false);
           api.showAnnotationTooltips(false);
 
-          // Force pause to frame 0 so the landing gears stay completely tucked in.
-          // Because the original creator baked the gear deploying and the prop spinning
-          // into the exact same file, we can't spin the prop without dropping the gear.
           api.pause();
           api.seekTo(0);
-
           api.setFov(65);
+
+          // Force perfect top-down view (camera on +Z axis looking at origin)
+          // The slight -0.01 on Y prevents gimbal lock
+          api.setCameraLookAt([0, -0.01, 22], [0, 0, 0], 0);
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
             const label = HOTSPOTS[id]?.label ?? id;
@@ -222,16 +224,42 @@ export function UavTwin() {
     return () => cancelAnimationFrame(timer);
   }, []);
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    dragRef.current = { isDragging: true, lastX: e.clientX };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (dragRef.current.isDragging) {
+      const delta = e.clientX - dragRef.current.lastX;
+      setHeading((h) => h + delta * 0.4);
+      dragRef.current.lastX = e.clientX;
+    }
+  };
+
+  const handlePointerUp = () => {
+    dragRef.current.isDragging = false;
+  };
+
   return (
     <div
-      className="absolute inset-0 overflow-hidden flex flex-col cursor-move"
-      style={{ perspective: "1000px", backgroundColor: "#020813" }}
+      className="absolute inset-0 overflow-hidden flex flex-col cursor-grab active:cursor-grabbing bg-[#020813]"
+      style={{ perspective: "1000px" }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
     >
-      <RealisticBackground />
+      {/* Massive spinning background to prevent edges from showing during rotation */}
+      <div
+        className="absolute top-1/2 left-1/2 w-[250vw] h-[250vh] -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none"
+        style={{ transform: `translate(-50%, -50%) rotate(${heading}deg)` }}
+      >
+        <RealisticBackground />
+      </div>
 
       <div
         ref={wrapperRef}
-        className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center z-10"
+        className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center z-10 pointer-events-none"
       >
         <iframe
           ref={iframeRef}
