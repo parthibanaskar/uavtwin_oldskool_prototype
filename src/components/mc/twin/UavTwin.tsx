@@ -254,9 +254,8 @@ export function UavTwin() {
               id={`marker-${id}`}
               className="absolute pointer-events-auto cursor-pointer group flex flex-col items-center justify-center z-20"
               style={{
-                opacity: 0,
                 transform: "translate(-50%, -50%)",
-                transition: "opacity 0.2s ease-in-out",
+                transition: "left 0.1s, top 0.1s, opacity 0.2s ease-in-out",
               }}
               onMouseEnter={() => setFocusHotspot(id)}
               onMouseLeave={() => setFocusHotspot(null)}
@@ -270,7 +269,7 @@ export function UavTwin() {
             >
               {/* Outer Glow Ring */}
               <div
-                className="absolute inset-[-4px] rounded-full animate-ping opacity-30"
+                className="absolute inset-[-4px] rounded-full animate-ping opacity-60"
                 style={{ backgroundColor: color }}
               />
               {/* Inner Dot */}
