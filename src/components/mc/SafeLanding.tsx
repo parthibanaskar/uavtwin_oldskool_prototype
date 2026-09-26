@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PlaneLanding } from "lucide-react";
 
 import { useMission } from "@/lib/twin/store";
@@ -12,17 +12,19 @@ import {
 import { Chip, Panel } from "./primitives";
 import { cn } from "@/lib/utils";
 
-function LandingCameraSequence({ siteName }: { siteName: string }) {
-  const [alt, setAlt] = useState(500);
+function LandingCameraSequence({
+  siteName,
+  altFt,
+}: {
+  siteName: string;
+  altFt: number;
+}) {
+  // Convert feet to meters for display
+  const altM = Math.round(altFt * 0.3048);
+  const scale = Math.max(1, 600 / (altFt * 0.3048 + 50));
+  const descentRate = altFt > 10 ? -4.2 : 0;
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAlt((a) => Math.max(0, a - Math.floor(Math.random() * 3 + 10)));
-    }, 200);
-    return () => clearInterval(interval);
-  }, []);
-
-  const scale = Math.max(1, 600 / (alt + 50));
+  const isDown = altM <= 5;
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[190px] rounded-sm border border-emerald-500/30 bg-[#0a101d] overflow-hidden font-mono flex flex-col mb-4">
@@ -64,18 +66,18 @@ function LandingCameraSequence({ siteName }: { siteName: string }) {
       <div className="absolute top-1 left-1 text-[8px] text-emerald-500 flex flex-col leading-tight">
         <span className="font-bold">OPTICAL FLOW</span>
         <span>TGT: {siteName.substring(0, 8)}</span>
-        <span>RATE: -4.2 m/s</span>
+        <span>RATE: {descentRate.toFixed(1)} m/s</span>
       </div>
 
       <div className="absolute bottom-1 right-1 text-sm font-bold text-emerald-500 flex items-end drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-        {alt}{" "}
+        {altM}{" "}
         <span className="text-[8px] ml-0.5 mb-0.5 text-emerald-500/70">
           M AGL
         </span>
       </div>
 
       <div className="absolute bottom-1 left-1 text-[8px] text-emerald-500 font-bold bg-emerald-500/20 px-1 rounded-sm">
-        {alt === 0 ? "TOUCHDOWN" : "AUTOLAND"}
+        {isDown ? "TOUCHDOWN" : "AUTOLAND"}
       </div>
     </div>
   );
@@ -100,13 +102,21 @@ export function SafeLanding() {
 
   const [pending, setPending] = useState<string | null>(null);
   const [committed, setCommitted] = useState<string | null>(null);
-  const [showCamera, setShowCamera] = useState(false);
 
-  const isLanded = displayed?.flightPhase === "landed";
-  const currentLat = displayed?.sample.params.lat ?? 35.0;
-  const currentLon = displayed?.sample.params.lon ?? -118.0;
+  // Use real GPS coordinates from telemetry (sample.gps, not params which has engine data)
+  const currentLat = displayed?.sample.gps?.lat ?? 28.6139; // Default: New Delhi area
+  const currentLon = displayed?.sample.gps?.lon ?? 77.209;
 
-  if (isLanded && !showCamera) {
+  // Real altitude from physics engine
+  const altFt = displayed?.sample.physics?.altitude_ft ?? 0;
+
+  // Show optical flow camera ONLY when landing mode is active (gears deploying, approaching FOB)
+  // This is driven by the physics engine, not by a button press
+  const landingMode = displayed?.sample.physics?.landing_mode === true;
+  const isLanded = displayed?.sample.physics?.landed === true;
+  const showCamera = committed !== null && landingMode;
+
+  if (isLanded) {
     return (
       <Panel title="Safe landing planner" bodyClassName="p-4 text-center">
         <PlaneLanding className="mx-auto mb-2 size-8 text-green-500" />
@@ -143,6 +153,7 @@ export function SafeLanding() {
           siteName={
             DIVERT_SITES.find((s) => s.id === committed)?.name || "RUNWAY"
           }
+          altFt={altFt}
         />
       ) : (
         <div className="relative mx-auto aspect-square w-full max-w-[190px] rounded-full border border-border/70 bg-muted/15">
@@ -235,7 +246,7 @@ export function SafeLanding() {
                   divert(site.lat, site.lon);
                   setCommitted(site.id);
                   setPending(null);
-                  setShowCamera(true);
+                  // Camera will auto-show when physics.landing_mode becomes true
                 } else {
                   setPending(site.id);
                 }

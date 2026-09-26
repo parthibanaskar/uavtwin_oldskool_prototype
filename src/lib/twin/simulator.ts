@@ -124,10 +124,9 @@ export class SimulatedTelemetrySource implements TelemetrySource {
     this.engineFailT = undefined;
     this.smoothed = {};
     this.profile = "cruise";
-    const defaultGPS = FLIGHT_PROFILES.cruise.gps;
     this.inertial = {
-      lat: defaultGPS.lat,
-      lon: defaultGPS.lon,
+      lat: BASE_LAT,
+      lon: BASE_LON,
       vLat: 0,
       vLon: 0,
     };

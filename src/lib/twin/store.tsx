@@ -456,7 +456,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearAllFaults = useCallback(() => {
-    ignoreUntil.current = Date.now() + 1500; // Drop incoming websocket packets for 1.5s to ensure backend resets
+    ignoreUntil.current = Date.now() + 1500;
+    // Flush the async queue so stale blackbox log callbacks don't repopulate after clear
+    chainQueue.current = Promise.resolve();
     sourceRef.current?.clearAllFaults();
     sourceRef.current?.setFuelPath("primary");
     setFuelPathState("primary");

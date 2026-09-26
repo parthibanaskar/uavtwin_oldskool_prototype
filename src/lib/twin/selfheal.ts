@@ -216,7 +216,7 @@ export function calculateBearing(
 }
 
 /** Cruise ground speed in km/min used for reachability against RUL. */
-const GROUND_SPEED_KM_PER_MIN = 1.35;
+const GROUND_SPEED_KM_PER_MIN = 3.67; // MQ-1C Gray Eagle cruise ~220 km/h
 
 export function minutesToDistance(distanceKm: number) {
   return distanceKm / GROUND_SPEED_KM_PER_MIN;
