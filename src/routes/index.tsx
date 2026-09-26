@@ -73,12 +73,18 @@ function TwinPanel() {
           <div className="panel-surface pointer-events-auto max-w-[19rem] p-2">
             <p className="label-xs">{hotspot.subsystem} subsystem</p>
             <p className="text-sm font-semibold">{hotspot.label}</p>
-            <p className={cn("font-mono text-lg leading-none", toneText[healthTone(value)])}>
+            <p
+              className={cn(
+                "font-mono text-lg leading-none",
+                toneText[healthTone(value)],
+              )}
+            >
               {value}
               <span className="text-xs text-muted-foreground">/100</span>
             </p>
             <p className="label-xs mt-1">
-              RUL {hotspotRul === null ? "stable" : `${hotspotRul.toFixed(0)} min`}
+              RUL{" "}
+              {hotspotRul === null ? "stable" : `${hotspotRul.toFixed(0)} min`}
             </p>
           </div>
         )}

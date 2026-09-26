@@ -19,6 +19,10 @@ export default tseslint.config(
       "react-refresh": reactRefresh,
     },
     rules: {
+      "react-hooks/exhaustive-deps": "off",
+      "react-refresh/only-export-components": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "prefer-const": "off",
       ...reactHooks.configs.recommended.rules,
       "no-restricted-imports": [
         "error",

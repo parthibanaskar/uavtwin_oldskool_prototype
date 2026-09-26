@@ -27,8 +27,6 @@ declare global {
   }
 }
 
-
-
 export function UavTwin() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -134,20 +132,41 @@ export function UavTwin() {
         // Find which subsystem this matches (heuristic mapping for native IDs)
         let subsystemKey = "engine";
         let title = "Component";
-        if (id === 2) { subsystemKey = "vibration"; title = "Propeller & Hub"; }
-        if (id === 5) { subsystemKey = "propulsion"; title = "Electric Motor"; }
-        if (id === 4) { subsystemKey = "engine"; title = "Hot Section / Exhaust"; }
-        if (id === 6) { subsystemKey = "lubrication"; title = "Oil Pump & Gallery"; }
-        if (id === 7) { subsystemKey = "fuel"; title = "Fuel Pump & Lines"; }
-        if (id === 8) { subsystemKey = "electrical"; title = "Generator & Bus"; }
-        if (id === 10) { subsystemKey = "nav"; title = "Nav / GNSS Bay"; }
+        if (id === 2) {
+          subsystemKey = "vibration";
+          title = "Propeller & Hub";
+        }
+        if (id === 5) {
+          subsystemKey = "propulsion";
+          title = "Electric Motor";
+        }
+        if (id === 4) {
+          subsystemKey = "engine";
+          title = "Hot Section / Exhaust";
+        }
+        if (id === 6) {
+          subsystemKey = "lubrication";
+          title = "Oil Pump & Gallery";
+        }
+        if (id === 7) {
+          subsystemKey = "fuel";
+          title = "Fuel Pump & Lines";
+        }
+        if (id === 8) {
+          subsystemKey = "electrical";
+          title = "Generator & Bus";
+        }
+        if (id === 10) {
+          subsystemKey = "nav";
+          title = "Nav / GNSS Bay";
+        }
 
         const val = state.health.subsystems[subsystemKey] ?? 100;
         const tone = healthTone(val).toUpperCase();
-        
+
         api.updateAnnotation(id, {
           title: title,
-          content: `Health: ${val.toFixed(0)}% [${tone}]`
+          content: `Health: ${val.toFixed(0)}% [${tone}]`,
         });
       });
     }, 500);
@@ -165,8 +184,6 @@ export function UavTwin() {
       className="absolute inset-0 overflow-hidden flex flex-col bg-[#020813]"
       style={{ perspective: "1000px" }}
     >
-      
-
       <div
         ref={wrapperRef}
         className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center z-10"
@@ -197,7 +214,6 @@ export function UavTwin() {
           </div>
         </div>
       </div>
-
-      </div>
+    </div>
   );
 }
