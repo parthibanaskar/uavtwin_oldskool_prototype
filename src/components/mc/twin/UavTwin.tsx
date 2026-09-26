@@ -24,54 +24,80 @@ const TONE_HEX: Record<string, string> = {
 declare global {
   interface Window {
     Sketchfab: any;
+    L: any; // Leaflet
   }
 }
 
-function GodsEyeBackground() {
+function RealisticBackground() {
+  const mapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let map: any = null;
+    let interval: any = null;
+
+    const initMap = () => {
+      if (!window.L || !mapRef.current) return;
+
+      // Initialize map over the desert (Edwards AFB region)
+      map = window.L.map(mapRef.current, {
+        center: [34.9, -117.88],
+        zoom: 15,
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+      });
+
+      // Esri World Imagery (Free, photorealistic satellite map, no API key required)
+      window.L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        { maxZoom: 19 },
+      ).addTo(map);
+
+      let lng = -117.88;
+      let lat = 34.9;
+
+      // Continuously pan the map to simulate the drone flying
+      interval = setInterval(() => {
+        lng -= 0.00005; // Fly west slowly
+        if (map) {
+          map.panTo([lat, lng], {
+            animate: true,
+            duration: 0.1,
+            easeLinearity: 1,
+          });
+        }
+      }, 100);
+    };
+
+    if (window.L) {
+      initMap();
+    } else {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = initMap;
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+      if (map) map.remove();
+    };
+  }, []);
+
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden bg-[#030712]">
-      {/* Tactical Grid Background */}
-      <div
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage:
-            "linear-gradient(#10b981 1px, transparent 1px), linear-gradient(90deg, #10b981 1px, transparent 1px)",
-          backgroundSize: "50px 50px",
-          transform:
-            "perspective(500px) rotateX(60deg) scale(2) translateY(-100px)",
-          transformOrigin: "top center",
-          animation: "fly 10s linear infinite",
-        }}
-      />
-
-      <style>{`
-        @keyframes fly {
-          from { background-position: 0 0; }
-          to { background-position: 0 500px; }
-        }
-        @keyframes scan {
-          0% { transform: translateY(-100px); opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { transform: translateY(100vh); opacity: 0; }
-        }
-      `}</style>
-
-      {/* Target Crosshairs */}
-      <div className="absolute top-1/2 left-1/2 w-[600px] h-[600px] -translate-x-1/2 -translate-y-1/2 border border-emerald-500/10 rounded-full" />
-      <div className="absolute top-1/2 left-1/2 w-[400px] h-[400px] -translate-x-1/2 -translate-y-1/2 border border-emerald-500/20 rounded-full" />
-      <div className="absolute top-1/2 left-1/2 w-40 h-40 -translate-x-1/2 -translate-y-1/2 border border-emerald-500/30 rounded-full" />
-
-      {/* Axis Lines */}
-      <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-emerald-500/10 -translate-x-1/2" />
-      <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-emerald-500/10 -translate-y-1/2" />
-
-      {/* Scanning Laser */}
-      <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.8)] animate-[scan_3s_ease-in-out_infinite]" />
-
-      {/* Vignette */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#030712_80%)]" />
-    </div>
+    <div
+      ref={mapRef}
+      className="absolute inset-0 z-0 pointer-events-none opacity-90"
+    />
   );
 }
 
@@ -106,18 +132,11 @@ export function UavTwin() {
           api.setAnnotationCameraTransition(false);
           api.showAnnotationTooltips(false);
 
-          // We must rely on baked animations because node names are stripped in this model.
-          // Let's attempt to play the "Cruise" animation (usually the last track)
-          // to keep gear up while spinning the prop.
-          api.getAnimations((err: any, anims: any[]) => {
-            if (!err && anims && anims.length > 0) {
-              const flightAnim =
-                anims.length > 1 ? anims[anims.length - 1].uid : anims[0].uid;
-              api.setCurrentAnimationByUID(flightAnim);
-              api.setSpeed(1.0); // We will modulate this in the RAF loop based on RPM
-              api.play();
-            }
-          });
+          // Force pause to frame 0 so the landing gears stay completely tucked in.
+          // Because the original creator baked the gear deploying and the prop spinning
+          // into the exact same file, we can't spin the prop without dropping the gear.
+          api.pause();
+          api.seekTo(0);
 
           api.setFov(65);
 
@@ -150,7 +169,7 @@ export function UavTwin() {
         setReady(true);
       },
       ui_animations: 0,
-      animation_autoplay: 0, // We manually start it above
+      animation_autoplay: 0,
       ui_controls: 0,
       ui_infos: 0,
       ui_watermark: 0,
@@ -185,7 +204,6 @@ export function UavTwin() {
       timer = requestAnimationFrame(tick);
 
       const state = stateRef.current;
-      const rpm = state?.sample.params.rpm ?? 0;
       const vib = state?.trustedVibration ?? 0;
       const t = performance.now() / 1000;
 
@@ -199,14 +217,6 @@ export function UavTwin() {
       if (wrapperRef.current) {
         wrapperRef.current.style.transform = `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`;
       }
-
-      // Modulate the baked animation speed using the live telemetry RPM!
-      if (apiRef.current && rpm > 0) {
-        let speedMultiplier = rpm / 3000; // Normalizes 3000 RPM to 1x speed
-        if (speedMultiplier < 0.1 && rpm > 0) speedMultiplier = 0.1;
-        if (speedMultiplier > 5.0) speedMultiplier = 5.0;
-        apiRef.current.setSpeed(speedMultiplier);
-      }
     };
     timer = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(timer);
@@ -217,7 +227,7 @@ export function UavTwin() {
       className="absolute inset-0 overflow-hidden flex flex-col cursor-move"
       style={{ perspective: "1000px", backgroundColor: "#020813" }}
     >
-      <GodsEyeBackground />
+      <RealisticBackground />
 
       <div
         ref={wrapperRef}
