@@ -2,11 +2,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useMission } from "@/lib/twin/store";
 import { HOTSPOTS } from "@/lib/twin/profiles";
 import { healthTone } from "../primitives";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
-function HUD() {
+function HUD({
+  center,
+  target,
+}: {
+  center: [number, number, number];
+  target: [number, number, number];
+}) {
+  const { camera } = useThree();
   const groupRef = useRef<THREE.Group>(null);
+
+  useEffect(() => {
+    camera.lookAt(...target);
+  }, [camera, target]);
 
   useFrame((_state, delta) => {
     if (groupRef.current) {
@@ -14,11 +25,13 @@ function HUD() {
     }
   });
 
+  // Calculate a dynamic scale if needed, but a fixed reasonable size usually works
+  // We center the HUD exactly on the drone's target coordinate
   return (
-    <group ref={groupRef}>
-      {/* Ground Grid on the XY plane (since Z is up) */}
+    <group ref={groupRef} position={center}>
+      {/* Ground Grid on the XY plane */}
       <gridHelper
-        args={[20, 40, "#10b981", "#10b981"]}
+        args={[60, 40, "#10b981", "#10b981"]}
         rotation={[Math.PI / 2, 0, 0]}
       >
         <lineBasicMaterial
@@ -31,21 +44,21 @@ function HUD() {
 
       {/* Outer rotating ring */}
       <mesh>
-        <ringGeometry args={[9.9, 10, 64]} />
+        <ringGeometry args={[29.8, 30, 64]} />
         <meshBasicMaterial
           color="#0ea5e9"
           transparent
-          opacity={0.5}
+          opacity={0.4}
           side={THREE.DoubleSide}
         />
       </mesh>
 
       {/* XYZ Origin Axes */}
-      <axesHelper args={[7]} />
+      <axesHelper args={[15]} />
 
       {/* Subtle sci-fi wireframe globe */}
       <mesh>
-        <sphereGeometry args={[10, 16, 16]} />
+        <sphereGeometry args={[30, 16, 16]} />
         <meshBasicMaterial
           color="#10b981"
           wireframe
@@ -90,6 +103,11 @@ export function UavTwin() {
   const [ready, setReady] = useState(false);
   const idxToId = useRef<Record<number, string>>({});
 
+  const [r3fCamera, setR3fCamera] = useState<{
+    position: [number, number, number];
+    target: [number, number, number];
+  } | null>(null);
+
   const health = displayed?.health;
   const stateRef = useRef(displayed);
 
@@ -113,7 +131,27 @@ export function UavTwin() {
           api.setAnnotationCameraTransition(false);
           api.showAnnotationTooltips(false);
 
-          api.setCameraLookAt([9, 9, 3], [0, 0, 0], 0);
+          api.getCameraLookAt((err: any, camera: any) => {
+            if (!err && camera) {
+              const target = camera.target as [number, number, number];
+              const eye = camera.position as [number, number, number];
+
+              // Scale distance by 1.35 to perfectly compensate for the 135% iframe CSS scale,
+              // keeping the drone exactly the size the author intended, right in the middle!
+              const dx = eye[0] - target[0];
+              const dy = eye[1] - target[1];
+              const dz = eye[2] - target[2];
+
+              const newEye: [number, number, number] = [
+                target[0] + dx * 1.35,
+                target[1] + dy * 1.35,
+                target[2] + dz * 1.35,
+              ];
+
+              api.setCameraLookAt(newEye, target, 0);
+              setR3fCamera({ position: newEye, target: target });
+            }
+          });
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
             const label = HOTSPOTS[id]?.label ?? id;
@@ -172,7 +210,6 @@ export function UavTwin() {
   }, [setFocusHotspot]);
 
   useEffect(() => {
-    // Ultimate failsafe: no matter what, drop the loading screen after 5 seconds
     const failsafe = setTimeout(() => setReady(true), 5000);
 
     if (document.getElementById("sf-sdk")) {
@@ -243,9 +280,13 @@ export function UavTwin() {
 
         {/* Transparent overlay for the 3D HUD axes */}
         <div className="absolute inset-0 pointer-events-none z-10 mix-blend-screen">
-          <Canvas camera={{ position: [9, 9, 3], up: [0, 0, 1], fov: 45 }}>
-            <HUD />
-          </Canvas>
+          {r3fCamera && (
+            <Canvas
+              camera={{ position: r3fCamera.position, up: [0, 0, 1], fov: 45 }}
+            >
+              <HUD center={r3fCamera.target} target={r3fCamera.target} />
+            </Canvas>
+          )}
         </div>
       </div>
 
