@@ -24,82 +24,23 @@ const TONE_HEX: Record<string, string> = {
 declare global {
   interface Window {
     Sketchfab: any;
-    L: any;
   }
 }
 
-function RealisticBackground() {
-  const mapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let map: any = null;
-    let interval: any = null;
-
-    const initMap = () => {
-      if (!window.L || !mapRef.current) return;
-
-      map = window.L.map(mapRef.current, {
-        center: [34.9, -117.88],
-        zoom: 16,
-        zoomControl: false,
-        attributionControl: false,
-        dragging: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false,
-        boxZoom: false,
-        keyboard: false,
-      });
-
-      window.L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        { maxZoom: 19 },
-      ).addTo(map);
-
-      // Force Leaflet to recalculate bounds after mounting in the massive CSS container
-      setTimeout(() => {
-        if (map) map.invalidateSize(true);
-      }, 500);
-
-      let lng = -117.88;
-      let lat = 34.9;
-
-      interval = setInterval(() => {
-        lat -= 0.00004;
-        if (map) {
-          map.panTo([lat, lng], {
-            animate: true,
-            duration: 0.1,
-            easeLinearity: 1,
-          });
-        }
-      }, 100);
-    };
-
-    if (window.L) {
-      initMap();
-    } else {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(link);
-
-      const script = document.createElement("script");
-      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-      script.onload = initMap;
-      document.head.appendChild(script);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-      if (map) map.remove();
-    };
-  }, []);
-
+function AirspaceBackground() {
   return (
-    <div
-      ref={mapRef}
-      className="absolute inset-0 z-0 pointer-events-none opacity-90"
-    />
+    <div className="absolute inset-0 z-0 overflow-hidden bg-[#020813]">
+      <div
+        className="absolute inset-0 opacity-20"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at center, #10b981 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#020813] via-[#020813]/50 to-transparent" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#020813_100%)]" />
+    </div>
   );
 }
 
@@ -111,9 +52,6 @@ export function UavTwin() {
   const { displayed, focusHotspot, setFocusHotspot } = useMission();
   const [ready, setReady] = useState(false);
   const idxToId = useRef<Record<number, string>>({});
-
-  const [heading, setHeading] = useState(0);
-  const dragRef = useRef({ isDragging: false, lastX: 0 });
 
   const health = displayed?.health;
   const stateRef = useRef(displayed);
@@ -136,31 +74,10 @@ export function UavTwin() {
         api.addEventListener("viewerready", () => {
           api.setAnnotationCameraTransition(false);
           api.showAnnotationTooltips(false);
-
-          api.pause();
-          api.seekTo(0);
           api.setFov(65);
 
-          // Dynamically fetch the model's native camera distance so it never clips/disappears
-          api.getCameraLookAt((err: any, camera: any) => {
-            if (!err && camera) {
-              const dx = camera.position[0] - camera.target[0];
-              const dy = camera.position[1] - camera.target[1];
-              const dz = camera.position[2] - camera.target[2];
-              const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-              // Force camera straight up along +Z, keeping the exact native bounding distance
-              api.setCameraLookAt(
-                [
-                  camera.target[0],
-                  camera.target[1] - 0.01,
-                  camera.target[2] + dist,
-                ],
-                camera.target,
-                0,
-              );
-            }
-          });
+          // Re-enable playback so the propeller spins based on RPM
+          api.play();
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
             const label = HOTSPOTS[id]?.label ?? id;
@@ -192,14 +109,14 @@ export function UavTwin() {
       },
       ui_animations: 0,
       animation_autoplay: 0,
-      ui_controls: 0,
+      ui_controls: 1, // Crucial: Re-enable free 3D orbiting for the user!
       ui_infos: 0,
       ui_watermark: 0,
       ui_annotations: 1,
       autostart: 1,
       preload: 1,
       camera: 0,
-      transparent: 1,
+      transparent: 1, // Leaves Sketchfab background transparent so our CSS gradient shows
     });
   }, [setFocusHotspot]);
 
@@ -227,6 +144,7 @@ export function UavTwin() {
 
       const state = stateRef.current;
       const vib = state?.trustedVibration ?? 0;
+      const rpm = state?.sample.params.rpm ?? 0;
       const t = performance.now() / 1000;
 
       const bank = Math.sin(t * 0.5) * 1.5;
@@ -239,52 +157,28 @@ export function UavTwin() {
       if (wrapperRef.current) {
         wrapperRef.current.style.transform = `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`;
       }
+
+      if (apiRef.current && rpm > 0) {
+        let speedMultiplier = rpm / 3000;
+        if (speedMultiplier < 0.1 && rpm > 0) speedMultiplier = 0.1;
+        if (speedMultiplier > 5.0) speedMultiplier = 5.0;
+        apiRef.current.setSpeed(speedMultiplier);
+      }
     };
     timer = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(timer);
   }, []);
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    dragRef.current = { isDragging: true, lastX: e.clientX };
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (dragRef.current.isDragging) {
-      const delta = e.clientX - dragRef.current.lastX;
-      setHeading((h) => h + delta * 0.4);
-      dragRef.current.lastX = e.clientX;
-    }
-  };
-
-  const handlePointerUp = () => {
-    dragRef.current.isDragging = false;
-  };
-
   return (
     <div
-      className="absolute inset-0 overflow-hidden flex flex-col cursor-grab active:cursor-grabbing bg-[#020813]"
+      className="absolute inset-0 overflow-hidden flex flex-col bg-[#020813]"
       style={{ perspective: "1000px" }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
     >
-      <div
-        className="absolute z-0 pointer-events-none transition-transform duration-75"
-        style={{
-          top: "50%",
-          left: "50%",
-          width: "200vw",
-          height: "200vh",
-          transform: `translate(-50%, -50%) rotate(${heading}deg)`,
-        }}
-      >
-        <RealisticBackground />
-      </div>
+      <AirspaceBackground />
 
       <div
         ref={wrapperRef}
-        className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center z-10 pointer-events-none"
+        className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center z-10"
       >
         <iframe
           ref={iframeRef}
