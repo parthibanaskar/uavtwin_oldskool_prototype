@@ -16,8 +16,8 @@ const ANNOTATIONS = [
 ];
 
 const TONE_HEX: Record<string, string> = {
-  nominal: "#10b981", 
-  warning: "#f59e0b", 
+  nominal: "#10b981",
+  warning: "#f59e0b",
   critical: "#ef4444",
 };
 
@@ -31,11 +31,11 @@ export function UavTwin() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const apiRef = useRef<any>(null);
   const propIdRef = useRef<string | null>(null);
-  
+
   const { displayed, focusHotspot, setFocusHotspot } = useMission();
   const [ready, setReady] = useState(false);
   const idxToId = useRef<Record<number, string>>({});
-  
+
   const health = displayed?.health;
   const stateRef = useRef(displayed);
 
@@ -61,22 +61,35 @@ export function UavTwin() {
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
             const label = HOTSPOTS[id]?.label ?? id;
-            api.addAnnotation(position, eye, label, "", (_err: any, idx: number) => {
-              idxToId.current[idx] = id;
-            });
+            api.addAnnotation(
+              position,
+              eye,
+              label,
+              "",
+              (_err: any, idx: number) => {
+                idxToId.current[idx] = id;
+              },
+            );
           });
 
           api.addEventListener("annotationSelect", (idx: number) => {
             const id = idxToId.current[idx];
             if (id) setFocusHotspot(id);
           });
-          api.addEventListener("annotationUnselect", () => setFocusHotspot(null));
+          api.addEventListener("annotationUnselect", () =>
+            setFocusHotspot(null),
+          );
 
           api.getSceneGraph((err: any, result: any) => {
             if (err) return;
             const findProp = (node: any) => {
               const name = (node.name || "").toLowerCase();
-              if (name.includes("prop") || name.includes("rotor") || name.includes("blade") || name.includes("engine")) {
+              if (
+                name.includes("prop") ||
+                name.includes("rotor") ||
+                name.includes("blade") ||
+                name.includes("engine")
+              ) {
                 propIdRef.current = node.instanceID;
               }
               if (node.children) node.children.forEach(findProp);
@@ -89,7 +102,14 @@ export function UavTwin() {
         });
       },
       error: () => console.error("Viewer error"),
-      ui_controls: 0, ui_infos: 0, ui_watermark: 0, ui_annotations: 1, autostart: 1, preload: 1, camera: 0, transparent: 1
+      ui_controls: 0,
+      ui_infos: 0,
+      ui_watermark: 0,
+      ui_annotations: 1,
+      autostart: 1,
+      preload: 1,
+      camera: 0,
+      transparent: 1,
     });
   }, [setFocusHotspot]);
 
@@ -103,7 +123,7 @@ export function UavTwin() {
     s.src = "https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js";
     s.onload = () => initViewer();
     document.head.appendChild(s);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [physicsStyles, setPhysicsStyles] = useState({});
@@ -113,7 +133,7 @@ export function UavTwin() {
     let timer: number;
     const tick = () => {
       timer = requestAnimationFrame(tick);
-      
+
       const state = stateRef.current;
       const rpm = state?.sample.params.rpm ?? 0;
       const vib = state?.trustedVibration ?? 0;
@@ -121,7 +141,7 @@ export function UavTwin() {
 
       const bank = Math.sin(t * 0.5) * 1.5;
       const pitch = Math.cos(t * 0.3) * 0.5;
-      
+
       const shakeAmt = Math.max(0, vib - 20) * 0.08;
       const shakeX = (Math.random() - 0.5) * shakeAmt;
       const shakeY = (Math.random() - 0.5) * shakeAmt;
@@ -135,20 +155,27 @@ export function UavTwin() {
 
       if (!apiRef.current || !propIdRef.current) return;
       angle += (rpm / 60) * 0.25;
-      apiRef.current.rotate(propIdRef.current, [angle, 0, 0, 1], { duration: 0 });
+      apiRef.current.rotate(propIdRef.current, [angle, 0, 0, 1], {
+        duration: 0,
+      });
     };
     timer = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(timer);
   }, []);
 
   return (
-    <div className="absolute inset-0 bg-[#101720] overflow-hidden flex flex-col" style={{ perspective: "1000px" }}>
-      
+    <div
+      className="absolute inset-0 bg-[#101720] overflow-hidden flex flex-col"
+      style={{ perspective: "1000px" }}
+    >
       {/* ── THE HACK: Scaled iframe ── 
           We make the iframe 135% width and height, and shift it top/left by -17.5%.
           This perfectly pushes ALL Sketchfab UI (watermark, title, buttons) off the edge of the screen,
           hiding it completely from the judges! */}
-      <div className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center" style={physicsStyles}>
+      <div
+        className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center"
+        style={physicsStyles}
+      >
         <iframe
           ref={iframeRef}
           title="UAV Digital Twin"
@@ -160,15 +187,22 @@ export function UavTwin() {
 
       {/* ── CUSTOM VAYUTWIN LOADING SCREEN ── 
           Hides the Sketchfab loader logo and UI completely until ready */}
-      <div 
+      <div
         className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#101720] transition-opacity duration-1000"
-        style={{ opacity: ready ? 0 : 1, pointerEvents: ready ? "none" : "auto" }}
+        style={{
+          opacity: ready ? 0 : 1,
+          pointerEvents: ready ? "none" : "auto",
+        }}
       >
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
           <div className="text-center">
-            <h3 className="text-sm font-bold tracking-widest text-emerald-500 mb-1">VAYUTWIN ENGINE</h3>
-            <p className="text-xs text-muted-foreground animate-pulse">Establishing secure link to 3D asset...</p>
+            <h3 className="text-sm font-bold tracking-widest text-emerald-500 mb-1">
+              VAYUTWIN ENGINE
+            </h3>
+            <p className="text-xs text-muted-foreground animate-pulse">
+              Establishing secure link to 3D asset...
+            </p>
           </div>
         </div>
       </div>
@@ -178,7 +212,8 @@ export function UavTwin() {
         <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 pointer-events-none z-20">
           {ANNOTATIONS.map(({ id }) => {
             const subsystem = HOTSPOTS[id]?.subsystem;
-            const val = subsystem && health ? (health.subsystems[subsystem] ?? 100) : 100;
+            const val =
+              subsystem && health ? (health.subsystems[subsystem] ?? 100) : 100;
             const tone = healthTone(val);
             const color = TONE_HEX[tone] || TONE_HEX.nominal;
             const isActive = focusHotspot === id;
@@ -194,7 +229,10 @@ export function UavTwin() {
                 }}
                 onClick={() => setFocusHotspot(isActive ? null : id)}
               >
-                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ backgroundColor: color }}
+                />
                 {HOTSPOTS[id]?.label ?? id}
                 <span className="opacity-70">{val}</span>
               </button>
