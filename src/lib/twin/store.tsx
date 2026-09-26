@@ -456,7 +456,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearAllFaults = useCallback(() => {
-    ignoreUntil.current = Date.now() + 500;
+    ignoreUntil.current = Date.now() + 1500; // Drop incoming websocket packets for 1.5s to ensure backend resets
     sourceRef.current?.clearAllFaults();
     sourceRef.current?.setFuelPath("primary");
     setFuelPathState("primary");
@@ -470,11 +470,15 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     setResolvedAlerts(new Set());
     setSilentlyResolvedAlerts(new Set());
     setHealActions([]);
-    setAlerts([]); // ADDED to clear alert feed!
-    healthHistory.current = {}; // ADDED to reset UI RUL tracking
+    setAlerts([]);
+    healthHistory.current = {};
     activeAlertKeys.current.clear();
-    setMissionId(makeMissionId());
-    log("fault.resetAll", {});
+    alertCooldowns.current.clear();
+    resolvingRef.current.clear();
+    const newId = makeMissionId();
+    setMissionId(newId);
+
+    log("SYSTEM_RESET", { new_mission: newId, status: "nominal" });
   }, [log]);
 
   const setPaused = useCallback((p: boolean) => {

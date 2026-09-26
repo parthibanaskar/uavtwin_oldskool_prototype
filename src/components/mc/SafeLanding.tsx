@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlaneLanding } from "lucide-react";
 
 import { useMission } from "@/lib/twin/store";
@@ -12,17 +12,90 @@ import {
 import { Chip, Panel } from "./primitives";
 import { cn } from "@/lib/utils";
 
+function LandingCameraSequence({ siteName }: { siteName: string }) {
+  const [alt, setAlt] = useState(1500);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAlt((a) => {
+        if (a <= 0) {
+          clearInterval(interval);
+          return 0;
+        }
+        return Math.max(0, a - Math.floor(Math.random() * 80 + 20));
+      });
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  const scale = Math.max(1, 2000 / (alt + 50));
+
+  return (
+    <div className="relative mx-auto aspect-square w-full max-w-[190px] rounded-sm border border-emerald-500/30 bg-[#0a101d] overflow-hidden font-mono flex flex-col mb-4">
+      {/* Scanning line */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500/50 animate-[scan_2s_linear_infinite]" />
+      <style>{`
+          @keyframes scan {
+            0% { transform: translateY(-10px); }
+            100% { transform: translateY(200px); }
+          }
+       `}</style>
+
+      {/* Crosshairs */}
+      <div className="absolute top-1/2 left-0 right-0 h-px bg-emerald-500/30" />
+      <div className="absolute top-0 bottom-0 left-1/2 w-px bg-emerald-500/30" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 border border-emerald-500/50 rounded-full" />
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border border-emerald-500/30 rounded-full animate-[spin_4s_linear_infinite]"
+        style={{
+          borderTopColor: "transparent",
+          borderBottomColor: "transparent",
+        }}
+      />
+
+      {/* Fake Runway Graphics (Scales up) */}
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-transform duration-100 ease-linear"
+        style={{ transform: `translate(-50%, -50%) scale(${scale})` }}
+      >
+        <div className="w-6 h-24 bg-zinc-800 border border-zinc-600 flex flex-col items-center justify-center opacity-80">
+          <div
+            className="w-[1px] h-full"
+            style={{ borderLeft: "1px dashed rgba(255,255,255,0.5)" }}
+          />
+        </div>
+      </div>
+
+      {/* HUD Overlays */}
+      <div className="absolute top-1 left-1 text-[8px] text-emerald-500 flex flex-col leading-tight">
+        <span className="font-bold">OPTICAL FLOW</span>
+        <span>TGT: {siteName.substring(0, 8)}</span>
+        <span>RATE: -4.2 m/s</span>
+      </div>
+
+      <div className="absolute bottom-1 right-1 text-sm font-bold text-emerald-500 flex items-end drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+        {alt}{" "}
+        <span className="text-[8px] ml-0.5 mb-0.5 text-emerald-500/70">
+          M AGL
+        </span>
+      </div>
+
+      <div className="absolute bottom-1 left-1 text-[8px] text-emerald-500 font-bold bg-emerald-500/20 px-1 rounded-sm">
+        {alt === 0 ? "TOUCHDOWN" : "AUTOLAND"}
+      </div>
+    </div>
+  );
+}
+
 export function SafeLanding() {
   const { rul, commandSafeLanding, divert, navMode, displayed } = useMission();
 
-  // Calculate worst RUL from the heuristic linear regression
   let worstRul = Object.values(rul).reduce<number | null>(
     (min, v) =>
       v === null || v === undefined ? min : min === null ? v : Math.min(min, v),
     null,
   );
 
-  // Also factor in the PyTorch PINN physics engine RUL if it's available!
   const pinnRul =
     typeof displayed?.sample.physics?.rul_seconds === "number"
       ? displayed.sample.physics.rul_seconds / 60.0
@@ -33,42 +106,19 @@ export function SafeLanding() {
 
   const [pending, setPending] = useState<string | null>(null);
   const [committed, setCommitted] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
 
-  const currentLat = displayed?.sample.gps.lat ?? 28.6139;
-  const currentLon = displayed?.sample.gps.lon ?? 77.209;
+  const isLanded = displayed?.flightPhase === "landed";
+  const currentLat = displayed?.sample.params.lat ?? 35.0;
+  const currentLon = displayed?.sample.params.lon ?? -118.0;
 
-  if (displayed?.sample.physics?.crashed) {
+  if (isLanded && !showCamera) {
     return (
-      <Panel
-        title="Mission Terminated"
-        subtitle="CATASTROPHIC FAILURE"
-        bodyClassName="grid place-items-center p-6 text-center border-red-500/50 bg-red-950/20"
-      >
-        <PlaneLanding className="size-8 text-red-500 mb-2 rotate-90" />
-        <h3 className="font-bold text-lg text-red-500 uppercase tracking-widest">
-          AIRCRAFT CRASHED
-        </h3>
-        <p className="text-xs text-muted-foreground mt-2">
-          Unmitigated fatigue led to structural failure. The UAV has suffered a
-          hull loss.
-        </p>
-      </Panel>
-    );
-  }
-
-  if (displayed?.sample.physics?.landed) {
-    return (
-      <Panel
-        title="Safe landing planner"
-        subtitle="Mission Terminated"
-        bodyClassName="grid place-items-center p-6 text-center"
-      >
-        <PlaneLanding className="size-8 text-green-400 mb-2" />
-        <h3 className="font-bold text-lg text-green-400 uppercase tracking-widest">
-          Landed & Grounded
-        </h3>
-        <p className="text-xs text-muted-foreground mt-2">
-          The UAV has successfully diverted and is safely grounded at the
+      <Panel title="Safe landing planner" bodyClassName="p-4 text-center">
+        <PlaneLanding className="mx-auto mb-2 size-8 text-green-500" />
+        <h3 className="text-lg font-bold text-green-500">VEHICLE ON GROUND</h3>
+        <p className="text-sm text-muted-foreground">
+          UAV has successfully executed emergency landing sequence at the
           designated divert airbase.
         </p>
         <button
@@ -86,7 +136,7 @@ export function SafeLanding() {
       title="Safe landing planner"
       subtitle={
         worstRul === null
-          ? "No degradation trend · all fields reachable"
+          ? "No degradation trend — all fields reachable"
           : `Worst remaining life ${worstRul > 120 ? (worstRul / 60).toFixed(1) + " hours" : worstRul.toFixed(0) + " min"}`
       }
       right={
@@ -94,14 +144,50 @@ export function SafeLanding() {
       }
       bodyClassName="space-y-2 p-3"
     >
-      <div className="relative mx-auto aspect-square w-full max-w-[190px] rounded-full border border-border/70 bg-muted/15">
-        <div className="absolute inset-[22%] rounded-full border border-border/50" />
-        <div className="absolute inset-[44%] rounded-full border border-border/40" />
-        <div className="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.8)] animate-pulse z-10" />
+      {showCamera ? (
+        <LandingCameraSequence
+          siteName={
+            DIVERT_SITES.find((s) => s.id === committed)?.name || "RUNWAY"
+          }
+        />
+      ) : (
+        <div className="relative mx-auto aspect-square w-full max-w-[190px] rounded-full border border-border/70 bg-muted/15">
+          <div className="absolute inset-[22%] rounded-full border border-border/50" />
+          <div className="absolute inset-[44%] rounded-full border border-border/40" />
+          <div className="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.8)] animate-pulse z-10" />
 
-        <svg className="absolute inset-0 size-full pointer-events-none">
+          <svg className="absolute inset-0 size-full pointer-events-none">
+            {DIVERT_SITES.map((site) => {
+              if (committed !== site.id) return null;
+              const distKm = haversineDistance(
+                currentLat,
+                currentLon,
+                site.lat,
+                site.lon,
+              );
+              const bearing = calculateBearing(
+                currentLat,
+                currentLon,
+                site.lat,
+                site.lon,
+              );
+              const r = Math.min(0.46, (distKm / 100) * 0.46);
+              const rad = ((bearing - 90) * Math.PI) / 180;
+              return (
+                <line
+                  key={`line-${site.id}`}
+                  x1="50%"
+                  y1="50%"
+                  x2={`${50 + Math.cos(rad) * r * 100}%`}
+                  y2={`${50 + Math.sin(rad) * r * 100}%`}
+                  className="stroke-primary stroke-2 opacity-70"
+                  strokeDasharray="4 3"
+                />
+              );
+            })}
+          </svg>
+
           {DIVERT_SITES.map((site) => {
-            if (committed !== site.id) return null;
             const distKm = haversineDistance(
               currentLat,
               currentLon,
@@ -114,56 +200,28 @@ export function SafeLanding() {
               site.lat,
               site.lon,
             );
-            const r = Math.min(0.46, (distKm / 100) * 0.46);
+            const r = Math.min(0.46, (distKm / 100) * 0.46); // 100km radar radius
             const rad = ((bearing - 90) * Math.PI) / 180;
+            const ok = isReachable(distKm, worstRul);
             return (
-              <line
-                key={`line-${site.id}`}
-                x1="50%"
-                y1="50%"
-                x2={`${50 + Math.cos(rad) * r * 100}%`}
-                y2={`${50 + Math.sin(rad) * r * 100}%`}
-                className="stroke-primary stroke-2 opacity-70"
-                strokeDasharray="4 3"
+              <button
+                key={site.id}
+                onClick={() => setPending(site.id)}
+                className={cn(
+                  "absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm",
+                  ok ? "bg-ok" : "bg-crit",
+                  committed === site.id && "ring-2 ring-primary",
+                )}
+                style={{
+                  left: `${50 + Math.cos(rad) * r * 100}%`,
+                  top: `${50 + Math.sin(rad) * r * 100}%`,
+                }}
+                title={site.name}
               />
             );
           })}
-        </svg>
-
-        {DIVERT_SITES.map((site) => {
-          const distKm = haversineDistance(
-            currentLat,
-            currentLon,
-            site.lat,
-            site.lon,
-          );
-          const bearing = calculateBearing(
-            currentLat,
-            currentLon,
-            site.lat,
-            site.lon,
-          );
-          const r = Math.min(0.46, (distKm / 100) * 0.46); // 100km radar radius
-          const rad = ((bearing - 90) * Math.PI) / 180;
-          const ok = isReachable(distKm, worstRul);
-          return (
-            <button
-              key={site.id}
-              onClick={() => setPending(site.id)}
-              className={cn(
-                "absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm",
-                ok ? "bg-ok" : "bg-crit",
-                committed === site.id && "ring-2 ring-primary",
-              )}
-              style={{
-                left: `${50 + Math.cos(rad) * r * 100}%`,
-                top: `${50 + Math.sin(rad) * r * 100}%`,
-              }}
-              title={site.name}
-            />
-          );
-        })}
-      </div>
+        </div>
+      )}
 
       <div className="space-y-1">
         {DIVERT_SITES.map((site) => {
@@ -179,10 +237,11 @@ export function SafeLanding() {
               key={site.id}
               onClick={() => {
                 if (pending === site.id) {
-                  commandSafeLanding(site.id);
+                  commandSafeLanding(site.name);
                   divert(site.lat, site.lon);
                   setCommitted(site.id);
                   setPending(null);
+                  setShowCamera(true);
                 } else {
                   setPending(site.id);
                 }
@@ -237,47 +296,6 @@ export function SafeLanding() {
           );
         })}
       </div>
-
-      {pending ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4">
-          <div className="panel-surface w-full max-w-sm space-y-3 p-4">
-            <div className="flex items-center gap-2">
-              <PlaneLanding className="size-4 text-primary" />
-              <h3 className="text-sm font-semibold">
-                Confirm safe-landing sequence
-              </h3>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {DIVERT_SITES.find((s) => s.id === pending)?.name} will be
-              uploaded as the active divert field. Power is derated for glide
-              reserve and the command is written to the tamper-evident black
-              box.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setPending(null)}
-                className="rounded-sm border border-border px-3 py-1.5 text-xs hover:bg-accent"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  const site = DIVERT_SITES.find((s) => s.id === pending);
-                  if (site) {
-                    commandSafeLanding(site.name);
-                    divert(site.lat, site.lon);
-                    setCommitted(site.id);
-                  }
-                  setPending(null);
-                }}
-                className="rounded-sm bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
-              >
-                Commit landing
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </Panel>
   );
 }

@@ -76,8 +76,8 @@ export function UavTwin() {
           api.showAnnotationTooltips(false);
           api.setFov(65);
 
-          // Re-enable playback so the propeller spins based on RPM
-          api.play();
+          api.pause();
+          api.seekTo(0);
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
             const label = HOTSPOTS[id]?.label ?? id;
@@ -156,13 +156,6 @@ export function UavTwin() {
 
       if (wrapperRef.current) {
         wrapperRef.current.style.transform = `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`;
-      }
-
-      if (apiRef.current && rpm > 0) {
-        let speedMultiplier = rpm / 3000;
-        if (speedMultiplier < 0.1 && rpm > 0) speedMultiplier = 0.1;
-        if (speedMultiplier > 5.0) speedMultiplier = 5.0;
-        apiRef.current.setSpeed(speedMultiplier);
       }
     };
     timer = requestAnimationFrame(tick);
