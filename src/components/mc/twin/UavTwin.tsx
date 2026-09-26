@@ -6,13 +6,25 @@ import { healthTone } from "../primitives";
 const MODEL_UID = "67703aedf76945ce872fc576be6a4321";
 
 const ANNOTATIONS = [
-  { id: 2, position: [-2.02, 0.11, -0.46], eye: [-2.72, 3.86, -5.92] },
-  { id: 5, position: [0.66, 0.04, -0.09], eye: [-0.64, 4.25, -6.07] },
-  { id: 4, position: [1.38, -0.17, -0.13], eye: [0.93, 2.92, -6.64] },
-  { id: 6, position: [0.93, 0.17, -0.16], eye: [0.85, 4.41, -5.92] },
-  { id: 7, position: [-0.3, -0.37, 0.19], eye: [-1.43, -0.58, 7.2] },
-  { id: 8, position: [-1.22, -0.37, 0.11], eye: [-1.86, -0.99, 7.15] },
-  { id: 10, position: [2.58, 0.13, 0.2], eye: [2.51, 3.99, 6.13] },
+  {
+    id: "propeller",
+    position: [-2.02, 0.11, -0.46],
+    eye: [-2.72, 3.86, -5.92],
+  },
+  { id: "motor", position: [0.66, 0.04, -0.09], eye: [-0.64, 4.25, -6.07] },
+  {
+    id: "hotSection",
+    position: [1.38, -0.17, -0.13],
+    eye: [0.93, 2.92, -6.64],
+  },
+  { id: "oilSystem", position: [0.93, 0.17, -0.16], eye: [0.85, 4.41, -5.92] },
+  { id: "fuelSystem", position: [-0.3, -0.37, 0.19], eye: [-1.43, -0.58, 7.2] },
+  {
+    id: "electrical",
+    position: [-1.22, -0.37, 0.11],
+    eye: [-1.86, -0.99, 7.15],
+  },
+  { id: "avionics", position: [2.58, 0.13, 0.2], eye: [2.51, 3.99, 6.13] },
 ];
 
 const TONE_HEX: Record<string, string> = {
@@ -51,7 +63,7 @@ function AirspaceBackground() {
 
       {/* 3D Perspective Grid Floor */}
       <div
-        className="absolute bottom-[-20%] left-[-50%] w-[200%] h-[120%] opacity-50 pointer-events-none"
+        className="absolute bottom-[0] left-[-50%] w-[200%] h-[150%] opacity-50 pointer-events-none"
         style={{
           backgroundImage: `
             linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
@@ -59,7 +71,7 @@ function AirspaceBackground() {
           `,
           backgroundSize: "60px 60px",
           backgroundPosition: "center center",
-          transform: "perspective(800px) rotateX(70deg) translateY(100px)",
+          transform: "perspective(800px) rotateX(75deg)",
           transformOrigin: "bottom center",
           maskImage:
             "linear-gradient(to top, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 80%)",
@@ -167,29 +179,36 @@ export function UavTwin() {
       }
     };
 
-    // Poll the 3D-to-2D coordinates of the annotations at ~30 FPS
-    trackTimer = window.setInterval(() => {
-      if (!apiRef.current) return;
-      ANNOTATIONS.forEach(({ id, position }) => {
-        if (apiRef.current.getWorldToScreenCoordinates) {
-          apiRef.current.getWorldToScreenCoordinates(
-            position,
-            (result: any) => {
-              const el = document.getElementById(`marker-${id}`);
-              // result is { canvasCoord: [x, y] } where origin is top-left
-              if (el && result && result.canvasCoord) {
-                const x = result.canvasCoord[0];
-                const y = result.canvasCoord[1];
-                el.style.left = `${x}px`;
-                el.style.top = `${y}px`;
-                el.style.bottom = "auto";
-                el.style.opacity = "1";
-              }
-            },
-          );
+    const getCoords = (pos: number[]) => {
+      return new Promise<{ x: number; y: number }>((resolve) => {
+        if (!apiRef.current?.getWorldToScreenCoordinates) {
+          return resolve({ x: 0, y: 0 });
         }
+        apiRef.current.getWorldToScreenCoordinates(pos, (result: any) => {
+          if (result && result.canvasCoord) {
+            resolve({ x: result.canvasCoord[0], y: result.canvasCoord[1] });
+          } else {
+            resolve({ x: 0, y: 0 });
+          }
+        });
       });
-    }, 33);
+    };
+
+    trackTimer = window.setInterval(async () => {
+      if (!apiRef.current) return;
+      for (const { id, position } of ANNOTATIONS) {
+        const coords = await getCoords(position);
+        const el = document.getElementById(`marker-${id}`);
+        if (el && coords.x > 0 && coords.y > 0) {
+          const x = coords.x / (window.devicePixelRatio || 1);
+          const y = coords.y / (window.devicePixelRatio || 1);
+          el.style.left = `${x}px`;
+          el.style.top = `${y}px`;
+          el.style.bottom = "auto";
+          el.style.opacity = "1";
+        }
+      }
+    }, 40);
 
     timer = requestAnimationFrame(tick);
 
