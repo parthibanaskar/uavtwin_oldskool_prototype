@@ -46,6 +46,9 @@ export function UavTwin() {
   const initViewer = useCallback(() => {
     const iframe = iframeRef.current;
     if (!iframe || !window.Sketchfab) return;
+    
+    // Prevent double initialization
+    if (apiRef.current) return;
 
     const client = new window.Sketchfab(iframe);
     client.init(MODEL_UID, {
@@ -56,20 +59,13 @@ export function UavTwin() {
           api.setAnnotationCameraTransition(false);
           api.showAnnotationTooltips(false);
 
-          // Zoom out camera to compensate for the massive 135% iframe scale
           api.setCameraLookAt([9, 9, 3], [0, 0, 0], 0);
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
             const label = HOTSPOTS[id]?.label ?? id;
-            api.addAnnotation(
-              position,
-              eye,
-              label,
-              "",
-              (_err: any, idx: number) => {
-                idxToId.current[idx] = id;
-              },
-            );
+            api.addAnnotation(position, eye, label, "", (_err: any, idx: number) => {
+              idxToId.current[idx] = id;
+            });
           });
 
           api.addEventListener("annotationSelect", (idx: number) => {
@@ -77,7 +73,7 @@ export function UavTwin() {
             if (id) setFocusHotspot(id);
           });
           api.addEventListener("annotationUnselect", () =>
-            setFocusHotspot(null),
+            setFocusHotspot(null)
           );
 
           api.getSceneGraph((err: any, result: any) => {
@@ -97,11 +93,13 @@ export function UavTwin() {
             findProp(result);
           });
 
-          // Wait 2 extra seconds for textures to load before dropping the loading screen
           setTimeout(() => setReady(true), 1500);
         });
       },
-      error: () => console.error("Viewer error"),
+      error: () => {
+        console.error("Viewer error");
+        setReady(true);
+      },
       ui_controls: 0,
       ui_infos: 0,
       ui_watermark: 0,
@@ -114,15 +112,20 @@ export function UavTwin() {
   }, [setFocusHotspot]);
 
   useEffect(() => {
+    // Ultimate failsafe: no matter what, drop the loading screen after 5 seconds
+    const failsafe = setTimeout(() => setReady(true), 5000);
+
     if (document.getElementById("sf-sdk")) {
       if (window.Sketchfab && !apiRef.current) initViewer();
-      return;
+      return () => clearTimeout(failsafe);
     }
     const s = document.createElement("script");
     s.id = "sf-sdk";
     s.src = "https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js";
     s.onload = () => initViewer();
     document.head.appendChild(s);
+    
+    return () => clearTimeout(failsafe);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -146,8 +149,6 @@ export function UavTwin() {
       const shakeX = (Math.random() - 0.5) * shakeAmt;
       const shakeY = (Math.random() - 0.5) * shakeAmt;
 
-      // The iframe itself is scaled 135% to push Sketchfab UI offscreen.
-      // We apply rotation and shake on top of that.
       setPhysicsStyles({
         transform: `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`,
         transition: "transform 0.05s ease-out",
@@ -155,9 +156,11 @@ export function UavTwin() {
 
       if (!apiRef.current || !propIdRef.current) return;
       angle += (rpm / 60) * 0.25;
-      apiRef.current.rotate(propIdRef.current, [angle, 0, 0, 1], {
-        duration: 0,
-      });
+      apiRef.current.rotate(
+        propIdRef.current,
+        [angle, 0, 0, 1],
+        { duration: 0 }
+      );
     };
     timer = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(timer);
@@ -168,10 +171,6 @@ export function UavTwin() {
       className="absolute inset-0 bg-[#101720] overflow-hidden flex flex-col"
       style={{ perspective: "1000px" }}
     >
-      {/* ── THE HACK: Scaled iframe ── 
-          We make the iframe 135% width and height, and shift it top/left by -17.5%.
-          This perfectly pushes ALL Sketchfab UI (watermark, title, buttons) off the edge of the screen,
-          hiding it completely from the judges! */}
       <div
         className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center"
         style={physicsStyles}
@@ -185,8 +184,6 @@ export function UavTwin() {
         />
       </div>
 
-      {/* ── CUSTOM VAYUTWIN LOADING SCREEN ── 
-          Hides the Sketchfab loader logo and UI completely until ready */}
       <div
         className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#101720] transition-opacity duration-1000"
         style={{
@@ -207,13 +204,14 @@ export function UavTwin() {
         </div>
       </div>
 
-      {/* ── XAI Health Badges ── */}
       {ready && (
         <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 pointer-events-none z-20">
           {ANNOTATIONS.map(({ id }) => {
             const subsystem = HOTSPOTS[id]?.subsystem;
             const val =
-              subsystem && health ? (health.subsystems[subsystem] ?? 100) : 100;
+              subsystem && health
+                ? (health.subsystems[subsystem] ?? 100)
+                : 100;
             const tone = healthTone(val);
             const color = TONE_HEX[tone] || TONE_HEX.nominal;
             const isActive = focusHotspot === id;
