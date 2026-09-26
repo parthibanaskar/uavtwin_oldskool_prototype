@@ -1,237 +1,249 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { Environment, Html, Lightformer, OrbitControls } from "@react-three/drei";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import * as THREE from "three";
+
 import { useMission } from "@/lib/twin/store";
 import { HOTSPOTS } from "@/lib/twin/profiles";
 import { healthTone } from "../primitives";
 
-const MODEL_UID = "67703aedf76945ce872fc576be6a4321";
+const TONE_HEX = { ok: "#2fd39a", warn: "#f2c14e", crit: "#ef4444" } as const;
 
-const ANNOTATIONS = [
-  { id: 2, position: [-2.02, 0.11, -0.46], eye: [-2.72, 3.86, -5.92] },
-  { id: 5, position: [0.66, 0.04, -0.09], eye: [-0.64, 4.25, -6.07] },
-  { id: 4, position: [1.38, -0.17, -0.13], eye: [0.93, 2.92, -6.64] },
-  { id: 6, position: [0.93, 0.17, -0.16], eye: [0.85, 4.41, -5.92] },
-  { id: 7, position: [-0.3, -0.37, 0.19], eye: [-1.43, -0.58, 7.2] },
-  { id: 8, position: [-1.22, -0.37, 0.11], eye: [-1.86, -0.99, 7.15] },
-  { id: 10, position: [2.58, 0.13, 0.2], eye: [2.51, 3.99, 6.13] },
-];
-
-const TONE_HEX: Record<string, string> = {
-  nominal: "#10b981",
-  warning: "#f59e0b",
-  critical: "#ef4444",
+/** Hotspot anchor points on the procedural airframe (metres, model space). */
+const HOTSPOT_POS: Record<string, [number, number, number]> = {
+  propeller: [0, 0.05, 2.35],
+  bearing: [0, 0.05, 1.5],
+  hotSection: [0.34, -0.05, 0.72],
+  cylinder: [-0.34, 0.05, 1.05],
+  oilSystem: [0, -0.3, 1.15],
+  fuelSystem: [0, -0.16, 0.1],
+  electrical: [0, 0.26, 0.45],
+  avionics: [0, 0.22, -0.55],
 };
 
-declare global {
-  interface Window {
-    Sketchfab: any;
-  }
-}
+function Airframe({ rpm, vibration }: { rpm: number; vibration: number }) {
+  const prop = useRef<THREE.Group>(null);
+  const body = useRef<THREE.Group>(null);
 
-function AirspaceBackground() {
+  useFrame((state, delta) => {
+    const dt = Math.min(delta, 0.05);
+    if (prop.current) prop.current.rotation.z += dt * (rpm / 60) * 0.35;
+    if (body.current) {
+      const a = Math.min(0.05, vibration * 0.0035);
+      const t = state.clock.elapsedTime;
+      body.current.position.y = Math.sin(t * 22) * a;
+      body.current.rotation.z = Math.sin(t * 17) * a * 0.6;
+    }
+  });
+
+  const metal = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#5b6672", metalness: 0.65, roughness: 0.45 }),
+    [],
+  );
+  const dark = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#2c3440", metalness: 0.4, roughness: 0.6 }),
+    [],
+  );
+
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden bg-[#0a0e17]">
-      {/* 2D Flat Graph Grid */}
-      <div
-        className="absolute inset-0 opacity-20 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px)
-          `,
-          backgroundSize: "100px 100px",
-          backgroundPosition: "0 0",
-        }}
-      />
-      {/* Yellow Axis Ticks (Top) */}
-      <div 
-        className="absolute top-0 left-0 right-0 h-[12px] pointer-events-none z-0"
-        style={{
-          backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 99px, rgba(234, 179, 8, 0.5) 99px, rgba(234, 179, 8, 0.5) 100px)",
-          borderBottom: "1px solid rgba(234, 179, 8, 0.3)"
-        }}
-      />
-      {/* Yellow Axis Ticks (Left) */}
-      <div 
-        className="absolute top-0 left-0 bottom-0 w-[12px] pointer-events-none z-0"
-        style={{
-          backgroundImage: "repeating-linear-gradient(180deg, transparent, transparent 99px, rgba(234, 179, 8, 0.5) 99px, rgba(234, 179, 8, 0.5) 100px)",
-          borderRight: "1px solid rgba(234, 179, 8, 0.3)"
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-[#0a0e17]/30 to-transparent pointer-events-none" />
-    </div>
+    <group ref={body}>
+      {/* fuselage */}
+      <mesh material={metal} position={[0, 0, 0.6]} rotation-x={Math.PI / 2} castShadow>
+        <capsuleGeometry args={[0.3, 2.6, 8, 20]} />
+      </mesh>
+      {/* nose cone */}
+      <mesh material={dark} position={[0, 0, 2.15]} rotation-x={-Math.PI / 2}>
+        <coneGeometry args={[0.29, 0.5, 20]} />
+      </mesh>
+      {/* wings */}
+      <mesh material={metal} position={[0, 0.02, 0.75]} castShadow>
+        <boxGeometry args={[6.2, 0.08, 0.66]} />
+      </mesh>
+      {/* winglets */}
+      {[-3.05, 3.05].map((x) => (
+        <mesh key={x} material={dark} position={[x, 0.18, 0.75]}>
+          <boxGeometry args={[0.06, 0.36, 0.5]} />
+        </mesh>
+      ))}
+      {/* tail booms */}
+      {[-0.55, 0.55].map((x) => (
+        <mesh key={x} material={dark} position={[x, 0, -0.9]} rotation-x={Math.PI / 2}>
+          <cylinderGeometry args={[0.055, 0.055, 2.6, 12]} />
+        </mesh>
+      ))}
+      {/* horizontal stabiliser */}
+      <mesh material={metal} position={[0, 0.16, -2.1]}>
+        <boxGeometry args={[1.5, 0.06, 0.4]} />
+      </mesh>
+      {[-0.55, 0.55].map((x) => (
+        <mesh key={x} material={dark} position={[x, 0.36, -2.1]}>
+          <boxGeometry args={[0.06, 0.5, 0.36]} />
+        </mesh>
+      ))}
+      {/* payload turret */}
+      <mesh material={dark} position={[0, -0.32, 0.95]}>
+        <sphereGeometry args={[0.2, 18, 14]} />
+      </mesh>
+      {/* propeller */}
+      <group ref={prop} position={[0, 0, 2.45]}>
+        <mesh material={dark}>
+          <sphereGeometry args={[0.09, 12, 10]} />
+        </mesh>
+        {[0, 1, 2].map((i) => (
+          <mesh
+            key={i}
+            material={metal}
+            rotation-z={(i * Math.PI * 2) / 3}
+            position={[
+              Math.cos((i * Math.PI * 2) / 3) * 0.42,
+              Math.sin((i * Math.PI * 2) / 3) * 0.42,
+              0,
+            ]}
+          >
+            <boxGeometry args={[0.8, 0.09, 0.03]} />
+          </mesh>
+        ))}
+      </group>
+    </group>
   );
 }
 
-export function UavTwin() {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const apiRef = useRef<any>(null);
+function Hotspot({
+  id,
+  value,
+  active,
+  onSelect,
+}: {
+  id: string;
+  value: number;
+  active: boolean;
+  onSelect: (id: string | null) => void;
+}) {
+  const ring = useRef<THREE.Mesh>(null);
+  const tone = healthTone(value);
+  const color = TONE_HEX[tone];
+  const pos = HOTSPOT_POS[id] ?? [0, 0, 0];
+  const [hover, setHover] = useState(false);
 
-  const { displayed, focusHotspot, setFocusHotspot } = useMission();
-  const [ready, setReady] = useState(false);
-  const idxToId = useRef<Record<number, string>>({});
-
-  const health = displayed?.health;
-  const stateRef = useRef(displayed);
-
-  useEffect(() => {
-    stateRef.current = displayed;
-  }, [displayed]);
-
-  const initViewer = useCallback(() => {
-    const iframe = iframeRef.current;
-    if (!iframe || !window.Sketchfab) return;
-
-    if (apiRef.current) return;
-
-    const client = new window.Sketchfab(iframe);
-    client.init(MODEL_UID, {
-      success: (api: any) => {
-        apiRef.current = api;
-        api.start();
-        api.addEventListener("viewerready", () => {
-          api.setAnnotationCameraTransition(false);
-          api.showAnnotationTooltips(false);
-          api.setFov(65);
-
-          api.pause();
-          api.seekTo(0);
-          setTimeout(() => setReady(true), 1500);
-        });
-      },
-      error: () => {
-        console.error("Viewer error");
-        setReady(true);
-      },
-      ui_animations: 0,
-      animation_autoplay: 0,
-      ui_controls: 1, // Crucial: Re-enable free 3D orbiting for the user!
-      ui_infos: 0,
-      ui_watermark: 0,
-      ui_annotations: 1,
-      autostart: 1,
-      preload: 1,
-      camera: 0,
-      transparent: 1, // Leaves Sketchfab background transparent so our CSS gradient shows
-    });
-  }, [setFocusHotspot]);
-
-  useEffect(() => {
-    const failsafe = setTimeout(() => setReady(true), 5000);
-
-    if (document.getElementById("sf-sdk")) {
-      if (window.Sketchfab && !apiRef.current) initViewer();
-      return () => clearTimeout(failsafe);
-    }
-    const s = document.createElement("script");
-    s.id = "sf-sdk";
-    s.src = "https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js";
-    s.onload = () => initViewer();
-    document.head.appendChild(s);
-
-    return () => clearTimeout(failsafe);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    let timer: number;
-    let trackTimer: number;
-
-    const tick = () => {
-      timer = requestAnimationFrame(tick);
-
-      const state = stateRef.current;
-      const vib = state?.trustedVibration ?? 0;
-      const rpm = state?.sample.params.rpm ?? 0;
-      const t = performance.now() / 1000;
-
-      const bank = Math.sin(t * 0.5) * 1.5;
-      const pitch = Math.cos(t * 0.3) * 0.5;
-
-      const shakeAmt = Math.max(0, vib - 20) * 0.08;
-      const shakeX = (Math.random() - 0.5) * shakeAmt;
-      const shakeY = (Math.random() - 0.5) * shakeAmt;
-
-      if (wrapperRef.current) {
-        wrapperRef.current.style.transform = `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`;
-      }
-    };
-
-    // Update native Sketchfab annotations based on REDUX state
-    trackTimer = window.setInterval(() => {
-      const api = apiRef.current;
-      const state = stateRef.current;
-      if (!api || !state || !state.health) return;
-
-      ANNOTATIONS.forEach(({ id }) => {
-        // Find which subsystem this matches (heuristic mapping for native IDs)
-        let subsystemKey = "engine";
-        let title = "Component";
-        if (id === 2) { subsystemKey = "vibration"; title = "Propeller & Hub"; }
-        if (id === 5) { subsystemKey = "propulsion"; title = "Electric Motor"; }
-        if (id === 4) { subsystemKey = "engine"; title = "Hot Section / Exhaust"; }
-        if (id === 6) { subsystemKey = "lubrication"; title = "Oil Pump & Gallery"; }
-        if (id === 7) { subsystemKey = "fuel"; title = "Fuel Pump & Lines"; }
-        if (id === 8) { subsystemKey = "electrical"; title = "Generator & Bus"; }
-        if (id === 10) { subsystemKey = "nav"; title = "Nav / GNSS Bay"; }
-
-        const val = state.health.subsystems[subsystemKey] ?? 100;
-        const tone = healthTone(val).toUpperCase();
-        
-        api.updateAnnotation(id, {
-          title: title,
-          content: `Health: ${val.toFixed(0)}% [${tone}]`
-        });
-      });
-    }, 500);
-
-    timer = requestAnimationFrame(tick);
-
-    return () => {
-      cancelAnimationFrame(timer);
-      clearInterval(trackTimer);
-    };
-  }, []);
+  useFrame((state) => {
+    if (!ring.current) return;
+    const pulse = tone === "ok" ? 1 : 1 + Math.sin(state.clock.elapsedTime * 5) * 0.22;
+    ring.current.scale.setScalar(pulse);
+  });
 
   return (
-    <div
-      className="absolute inset-0 overflow-hidden flex flex-col bg-[#020813]"
-      style={{ perspective: "1000px" }}
-    >
-      <AirspaceBackground />
-
-      <div
-        ref={wrapperRef}
-        className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center z-10"
-      >
-        <iframe
-          ref={iframeRef}
-          title="UAV Digital Twin"
-          allow="autoplay; fullscreen; xr-spatial-tracking"
-          className="w-full h-full border-0 outline-none"
-        />
-      </div>
-
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#030712] transition-opacity duration-1000 pointer-events-none"
-        style={{
-          opacity: ready ? 0 : 1,
+    <group position={pos}>
+      <mesh
+        ref={ring}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHover(true);
+        }}
+        onPointerOut={() => setHover(false)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(active ? null : id);
         }}
       >
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
-          <div className="text-center">
-            <h3 className="text-sm font-bold tracking-widest text-emerald-500 mb-1">
-              VAYUTWIN ENGINE
-            </h3>
-            <p className="text-xs text-emerald-500/50 animate-pulse">
-              Establishing secure link to 3D asset...
+        <sphereGeometry args={[0.13, 16, 12]} />
+        <meshBasicMaterial color={color} transparent opacity={active || hover ? 0.95 : 0.6} />
+      </mesh>
+      {(hover || active) && (
+        <Html center distanceFactor={9} position={[0, 0.3, 0]}>
+          <div className="pointer-events-none rounded-sm border border-border bg-card/95 px-2 py-1 text-center whitespace-nowrap">
+            <p className="label-xs">{HOTSPOTS[id]?.label ?? id}</p>
+            <p className="font-mono text-xs" style={{ color }}>
+              {value}/100
             </p>
           </div>
-        </div>
-      </div>
+        </Html>
+      )}
+    </group>
+  );
+}
 
-      </div>
+function GlbAirframe({ url }: { url: string }) {
+  const [Comp, setComp] = useState<React.ComponentType | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const { useGLTF } = await import("@react-three/drei");
+      if (!alive) return;
+      const Model = () => {
+        const gltf = useGLTF(url);
+        return <primitive object={gltf.scene} />;
+      };
+      setComp(() => Model);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+  return Comp ? <Comp /> : null;
+}
+
+export function UavTwin() {
+  const { displayed, focusHotspot, setFocusHotspot } = useMission();
+  const [hasModel, setHasModel] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void fetch("/models/uav.glb", { method: "HEAD" })
+      .then((r) => {
+        if (alive && r.ok) setHasModel(true);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const health = displayed?.health;
+
+  return (
+    <Canvas shadows camera={{ position: [4.2, 2.6, 5.4], fov: 46 }} dpr={[1, 1.8]}>
+      <color attach="background" args={["#101720"]} />
+      <fog attach="fog" args={["#101720", 12, 34]} />
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[6, 9, 5]} intensity={1.5} castShadow />
+      <Environment>
+        <Lightformer intensity={1.6} position={[0, 6, 2]} scale={[10, 10, 1]} />
+        <Lightformer
+          intensity={0.9}
+          color="#7fd8e8"
+          position={[-6, 1, -2]}
+          rotation-y={Math.PI / 2}
+          scale={[18, 2, 1]}
+        />
+      </Environment>
+      <gridHelper args={[26, 26, "#26313d", "#1b232c"]} position={[0, -1.4, 0]} />
+      <Suspense fallback={null}>
+        {hasModel ? (
+          <GlbAirframe url="/models/uav.glb" />
+        ) : (
+          <Airframe
+            rpm={displayed?.sample.params.rpm ?? 0}
+            vibration={displayed?.trustedVibration ?? 0}
+          />
+        )}
+      </Suspense>
+      {Object.keys(HOTSPOT_POS).map((id) => (
+        <Hotspot
+          key={id}
+          id={id}
+          value={health ? health.subsystems[HOTSPOTS[id]!.subsystem] : 100}
+          active={focusHotspot === id}
+          onSelect={setFocusHotspot}
+        />
+      ))}
+      <OrbitControls
+        enablePan={false}
+        minDistance={3.5}
+        maxDistance={12}
+        target={[0, 0, 0.4]}
+        autoRotate={!focusHotspot}
+        autoRotateSpeed={0.35}
+      />
+    </Canvas>
   );
 }
