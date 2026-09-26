@@ -2,73 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useMission } from "@/lib/twin/store";
 import { HOTSPOTS } from "@/lib/twin/profiles";
 import { healthTone } from "../primitives";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import * as THREE from "three";
-
-function HUD({
-  center,
-  target,
-}: {
-  center: [number, number, number];
-  target: [number, number, number];
-}) {
-  const { camera } = useThree();
-  const groupRef = useRef<THREE.Group>(null);
-
-  useEffect(() => {
-    camera.lookAt(...target);
-  }, [camera, target]);
-
-  useFrame((_state, delta) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.z += delta * 0.2; // Slow rotation around Z-up
-    }
-  });
-
-  // Calculate a dynamic scale if needed, but a fixed reasonable size usually works
-  // We center the HUD exactly on the drone's target coordinate
-  return (
-    <group ref={groupRef} position={center}>
-      {/* Ground Grid on the XY plane */}
-      <gridHelper
-        args={[60, 40, "#10b981", "#10b981"]}
-        rotation={[Math.PI / 2, 0, 0]}
-      >
-        <lineBasicMaterial
-          attach="material"
-          color="#10b981"
-          transparent
-          opacity={0.15}
-        />
-      </gridHelper>
-
-      {/* Outer rotating ring */}
-      <mesh>
-        <ringGeometry args={[29.8, 30, 64]} />
-        <meshBasicMaterial
-          color="#0ea5e9"
-          transparent
-          opacity={0.4}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      {/* XYZ Origin Axes */}
-      <axesHelper args={[15]} />
-
-      {/* Subtle sci-fi wireframe globe */}
-      <mesh>
-        <sphereGeometry args={[30, 16, 16]} />
-        <meshBasicMaterial
-          color="#10b981"
-          wireframe
-          transparent
-          opacity={0.03}
-        />
-      </mesh>
-    </group>
-  );
-}
 
 const MODEL_UID = "67703aedf76945ce872fc576be6a4321";
 
@@ -95,6 +28,7 @@ declare global {
 }
 
 export function UavTwin() {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const apiRef = useRef<any>(null);
   const propIdRef = useRef<string | null>(null);
@@ -102,11 +36,6 @@ export function UavTwin() {
   const { displayed, focusHotspot, setFocusHotspot } = useMission();
   const [ready, setReady] = useState(false);
   const idxToId = useRef<Record<number, string>>({});
-
-  const [r3fCamera, setR3fCamera] = useState<{
-    position: [number, number, number];
-    target: [number, number, number];
-  } | null>(null);
 
   const health = displayed?.health;
   const stateRef = useRef(displayed);
@@ -131,27 +60,10 @@ export function UavTwin() {
           api.setAnnotationCameraTransition(false);
           api.showAnnotationTooltips(false);
 
-          api.getCameraLookAt((err: any, camera: any) => {
-            if (!err && camera) {
-              const target = camera.target as [number, number, number];
-              const eye = camera.position as [number, number, number];
-
-              // Scale distance by 1.35 to perfectly compensate for the 135% iframe CSS scale,
-              // keeping the drone exactly the size the author intended, right in the middle!
-              const dx = eye[0] - target[0];
-              const dy = eye[1] - target[1];
-              const dz = eye[2] - target[2];
-
-              const newEye: [number, number, number] = [
-                target[0] + dx * 1.35,
-                target[1] + dy * 1.35,
-                target[2] + dz * 1.35,
-              ];
-
-              api.setCameraLookAt(newEye, target, 0);
-              setR3fCamera({ position: newEye, target: target });
-            }
-          });
+          // Instead of manually shifting the camera and breaking coordinates,
+          // we simply widen the Field of View to 65.
+          // This perfectly zooms the drone out to exactly counteract the 135% CSS scale mask!
+          api.setFov(65);
 
           ANNOTATIONS.forEach(({ id, position, eye }) => {
             const label = HOTSPOTS[id]?.label ?? id;
@@ -226,8 +138,6 @@ export function UavTwin() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [physicsStyles, setPhysicsStyles] = useState({});
-
   useEffect(() => {
     let angle = 0;
     let timer: number;
@@ -246,10 +156,12 @@ export function UavTwin() {
       const shakeX = (Math.random() - 0.5) * shakeAmt;
       const shakeY = (Math.random() - 0.5) * shakeAmt;
 
-      setPhysicsStyles({
-        transform: `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`,
-        transition: "transform 0.05s ease-out",
-      });
+      // Using direct DOM manipulation for the physics transform completely prevents
+      // React from endlessly re-rendering this component 60 times a second.
+      // This stops React from accidentally resetting or wiping the Sketchfab iframe!
+      if (wrapperRef.current) {
+        wrapperRef.current.style.transform = `translate(${shakeX}px, ${shakeY}px) rotateZ(${bank}deg) rotateX(${pitch}deg)`;
+      }
 
       if (!apiRef.current || !propIdRef.current) return;
       angle += (rpm / 60) * 0.25;
@@ -263,38 +175,25 @@ export function UavTwin() {
 
   return (
     <div
-      className="absolute inset-0 bg-[#101720] overflow-hidden flex flex-col"
+      className="absolute inset-0 bg-[#101720] overflow-hidden flex flex-col cursor-move"
       style={{ perspective: "1000px" }}
     >
       <div
+        ref={wrapperRef}
         className="absolute top-[-17.5%] left-[-17.5%] w-[135%] h-[135%] origin-center"
-        style={physicsStyles}
       >
         <iframe
           ref={iframeRef}
           title="UAV Digital Twin"
-          src=""
           allow="autoplay; fullscreen; xr-spatial-tracking"
           className="w-full h-full border-0 outline-none"
         />
-
-        {/* Transparent overlay for the 3D HUD axes */}
-        <div className="absolute inset-0 pointer-events-none z-10 mix-blend-screen">
-          {r3fCamera && (
-            <Canvas
-              camera={{ position: r3fCamera.position, up: [0, 0, 1], fov: 45 }}
-            >
-              <HUD center={r3fCamera.target} target={r3fCamera.target} />
-            </Canvas>
-          )}
-        </div>
       </div>
 
       <div
-        className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#101720] transition-opacity duration-1000"
+        className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#101720] transition-opacity duration-1000 pointer-events-none"
         style={{
           opacity: ready ? 0 : 1,
-          pointerEvents: ready ? "none" : "auto",
         }}
       >
         <div className="flex flex-col items-center gap-4">
