@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pause, Play, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 
 import { useMission } from "@/lib/twin/store";
@@ -17,6 +17,11 @@ const PROFILE_ORDER: FlightProfile[] = [
 
 export function ScenarioControls() {
   const [expanded, setExpanded] = useState(false);
+  const [showHint, setShowHint] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowHint(false), 15000);
+    return () => clearTimeout(timer);
+  }, []);
   const {
     profile,
     setProfile,
@@ -40,9 +45,17 @@ export function ScenarioControls() {
   return (
     <Panel
       title="Mission replay & scenario injection"
-      subtitle="Ground-truth labelled faults • synthetic data"
+      subtitle="INJECT CRITICAL SYSTEM FAILURES"
       right={
-        <div className="flex items-center gap-1">
+        <div className="relative flex items-center gap-1">
+          {showHint && !expanded && (
+            <div className="absolute -top-[3.25rem] right-0 flex flex-col items-end animate-bounce pointer-events-none z-50">
+              <span className="bg-primary text-primary-foreground text-xs px-2.5 py-1.5 rounded-sm font-bold whitespace-nowrap shadow-[0_0_20px_rgba(0,255,100,0.4)] border border-primary/50">
+                START HERE: INJECT FAULT
+              </span>
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-primary mr-6"></div>
+            </div>
+          )}
           <button
             onClick={() => setPaused(!paused)}
             className="inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1 font-mono text-[0.65rem] uppercase hover:bg-accent"
@@ -76,7 +89,7 @@ export function ScenarioControls() {
           </button>
           <div className="mx-1 h-3 w-px bg-border"></div>
           <button
-            onClick={() => setExpanded(!expanded)}
+            onClick={() => { setExpanded(!expanded); setShowHint(false); }}
             className="inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1 font-mono text-[0.65rem] uppercase transition-colors hover:bg-accent"
             title={expanded ? "Collapse" : "Expand"}
           >

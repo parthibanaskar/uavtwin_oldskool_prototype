@@ -57,10 +57,10 @@ function TwinPanel() {
   return (
     <Panel
       title="UAV digital twin"
-      subtitle="Click a hotspot for the subsystem drilldown"
+      subtitle="LIVE SENSOR FUSION & FLIGHT TELEMETRY"
       right={
         <Chip tone="info">
-          {sourceKind === "simulated" ? "PYTHON EDGE NODE" : "HARDWARE"}
+          {sourceKind === "simulated" ? "DATALINK: SIMULATED" : "DATALINK: LIVE"}
         </Chip>
       }
       className="h-[26rem] shrink-0"

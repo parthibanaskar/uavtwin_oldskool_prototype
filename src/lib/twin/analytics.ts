@@ -966,27 +966,27 @@ export function evaluateAlerts(d: Derived): AlertCandidate[] {
   if (d.gpsErrorMetres > 45) {
     push({
       key: "gpsSpoof",
-      subsystem: "nav",
-      title: "GNSS spoofing suspected",
-      severity: d.gpsErrorMetres > 140 ? "critical" : "warning",
-      confidence: clamp01(0.5 + d.gpsErrorMetres / 400),
-      hotspot: "avionics",
-      contributions: [
-        contribution(
-          "gps",
-          "GNSS vs inertial split",
-          clamp01(d.gpsErrorMetres / 260) * 70,
-          `${d.gpsErrorMetres.toFixed(0)} m divergence`,
-        ),
-        contribution(
-          "redundancy",
-          "Satellite count anomaly",
-          d.sample.gpsSats > 13 ? 30 : 6,
-          `${d.sample.gpsSats} vehicles tracked`,
-        ),
-      ],
-      narrative: `CYBER ANOMALY DETECTED: Electronic Warfare / GNSS Spoofing Attack.\n\n• Where: GNSS receiver and navigation avionics.\n• What: The satellite-reported GPS position is rapidly diverging from the internal physical Inertial Measurement Unit (IMU) solution.\n• Software Impact: The receiver is tracking an implausibly high number of satellites (14+) with perfect signal strength, indicating a synthetic terrestrial spoofing transmitter.\n• Threat: The autopilot will physically steer the drone off-course into hostile territory if it follows the spoofed coordinates.`,
-      resolutionNarrative: `ACTION EXECUTED: Defensive Electronic Warfare protocol engaged.\n\n• Software Mitigation: The AI has completely severed the autopilot's connection to the GNSS receiver.\n• Hardware Mitigation: Navigation seamlessly fell back to military-grade dead-reckoning using the internal IMU, optical flow, and compass.\n• Outcome: Spoofed coordinates rejected. Drone is now successfully navigating via inertial guidance to the safe divert zone.`,
+        subsystem: "nav",
+        title: "GNSS spoofing suspected",
+        severity: d.gpsErrorMetres > 140 ? "critical" : "warning",
+        confidence: clamp01(0.5 + d.gpsErrorMetres / 400),
+        hotspot: "avionics",
+        contributions: [
+          contribution(
+            "gps",
+            "Position Error",
+            clamp01(d.gpsErrorMetres / 260) * 70,
+            `${d.gpsErrorMetres.toFixed(0)} m divergence`
+          ),
+          contribution(
+            "redundancy",
+            "Attitude Error",
+            40,
+            `${(d.gpsErrorMetres / 10).toFixed(1)}° induced roll`
+          ),
+        ],
+        narrative: `CRITICAL SECURITY ALERT: Foreign electronic warfare signals detected manipulating GNSS bands.\n\n? Root Cause: Malicious RF interference attempting to hijack positional awareness.\n? Physical Impact: Flight computer is aggressively banking (up to 45°) to chase a phantom coordinate. Path deviation is currently ${d.gpsErrorMetres.toFixed(1)} meters.\n? Action: Execute XAI fix immediately to switch to pure inertial/odometry navigation.`,
+        resolutionNarrative: `ACTION EXECUTED: Secure Nav Mode Engaged.\n\n? Mitigation: AI flight controller dynamically dropped the spoofed GNSS feed and fell back to dead-reckoning and secondary IMU sensors.\n? Outcome: Erroneous banking counteracted. The aircraft has returned to nominal flight path and leveled its attitude (0° roll).`,
     });
   }
 

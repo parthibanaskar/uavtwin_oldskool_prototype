@@ -259,7 +259,43 @@ export const SCENARIOS: Scenario[] = [
     rampSeconds: 1,
     description:
       "External interference introduces a 2km lateral bias to GNSS coordinates.",
+  },,
+  {
+    key: "sensorDrift",
+    label: "EGT Sensor Drift",
+    subsystem: "engine",
+    severity: "advisory",
+    hotspot: "hotSection",
+    rampSeconds: 2,
+    description: "Thermal fatigue causes the primary EGT thermocouple to drift slowly, risking ECU miscalculation."
   },
+  {
+    key: "propImbalance",
+    label: "Propeller Ice Accumulation",
+    subsystem: "vibration",
+    severity: "warning",
+    hotspot: "propeller",
+    rampSeconds: 3,
+    description: "Ice buildup on the blade roots introduces a 1x rotational imbalance, increasing shaft fatigue."
+  },
+  {
+    key: "busSag",
+    label: "Alternator Degradation",
+    subsystem: "electrical",
+    severity: "advisory",
+    hotspot: "electrical",
+    rampSeconds: 1.5,
+    description: "Brushes wear out, causing main bus voltage to sag under load. Avionics switch to secondary regulation."
+  },
+  {
+    key: "icing",
+    label: "Airframe Icing",
+    subsystem: "engine",
+    severity: "warning",
+    hotspot: "propeller",
+    rampSeconds: 3,
+    description: "Leading edge ice accumulation drags RPM and forces the engine to run hotter to maintain thrust."
+  }
 ];
 
 export const SCENARIO_BY_KEY: Record<string, Scenario> = Object.fromEntries(

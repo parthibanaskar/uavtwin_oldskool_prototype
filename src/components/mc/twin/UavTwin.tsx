@@ -110,8 +110,8 @@ export function UavTwin() {
       const rpm = state?.sample.params.rpm ?? 0;
       const t = performance.now() / 1000;
 
-      const bank = Math.sin(t * 0.5) * 1.5;
-      const pitch = Math.cos(t * 0.3) * 0.5;
+      const bank = state?.sample.physics?.roll_deg ?? (Math.sin(t * 0.5) * 1.5);
+      const pitch = state?.sample.physics?.pitch_deg ?? (Math.cos(t * 0.3) * 0.5);
 
       const shakeAmt = Math.max(0, vib - 20) * 0.08;
       const shakeX = (Math.random() - 0.5) * shakeAmt;

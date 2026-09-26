@@ -71,6 +71,8 @@ export interface Sample {
     mission_distance_km?: number;
     throttle_reduction?: number;
     altitude_ft?: number;
+      pitch_deg?: number;
+      roll_deg?: number;
     gpsSpoofed: boolean;
     landing_mode?: boolean;
     landed?: boolean;
