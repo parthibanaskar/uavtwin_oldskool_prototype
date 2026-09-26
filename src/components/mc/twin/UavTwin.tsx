@@ -29,17 +29,27 @@ declare global {
 
 function AirspaceBackground() {
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden bg-[#020813]">
+    <div className="absolute inset-0 z-0 overflow-hidden bg-[#070b14]">
+      {/* 3D Perspective Grid Floor */}
       <div
-        className="absolute inset-0 opacity-20"
+        className="absolute bottom-0 left-[-50%] w-[200%] h-[150%] opacity-40 pointer-events-none"
         style={{
-          backgroundImage:
-            "radial-gradient(circle at center, #10b981 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
+          backgroundImage: `
+            linear-gradient(rgba(16, 185, 129, 0.5) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(16, 185, 129, 0.5) 1px, transparent 1px)
+          `,
+          backgroundSize: "60px 60px",
+          backgroundPosition: "center center",
+          transform:
+            "perspective(600px) rotateX(75deg) translateY(200px) translateZ(-200px)",
+          transformOrigin: "bottom center",
+          maskImage:
+            "linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 80%)",
+          WebkitMaskImage:
+            "linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 80%)",
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#020813] via-[#020813]/50 to-transparent" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#020813_100%)]" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#070b14] via-[#070b14]/70 to-transparent pointer-events-none" />
     </div>
   );
 }
@@ -143,17 +153,22 @@ export function UavTwin() {
     trackTimer = window.setInterval(() => {
       if (!apiRef.current) return;
       ANNOTATIONS.forEach(({ id, position }) => {
-        apiRef.current.getWorldToWindowCoordinates(
-          position,
-          (err: any, coords: [number, number]) => {
-            const el = document.getElementById(`marker-${id}`);
-            if (el && coords && coords.length === 2) {
-              el.style.left = `${coords[0]}px`;
-              el.style.top = `${coords[1]}px`;
-              el.style.opacity = "1";
-            }
-          },
-        );
+        if (apiRef.current.getWorldToScreenCoordinates) {
+          apiRef.current.getWorldToScreenCoordinates(
+            position,
+            (err: any, coords: { x: number; y: number } | [number, number]) => {
+              const el = document.getElementById(`marker-${id}`);
+              if (el && coords) {
+                // Sketchfab returns x, y where y is from bottom (sometimes as object, sometimes array)
+                const x = Array.isArray(coords) ? coords[0] : coords.x;
+                const y = Array.isArray(coords) ? coords[1] : coords.y;
+                el.style.left = `${x}px`;
+                el.style.bottom = `${y}px`;
+                el.style.opacity = "1";
+              }
+            },
+          );
+        }
       });
     }, 33);
 

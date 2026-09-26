@@ -164,6 +164,7 @@ export function AlertFeed({ className }: { className?: string }) {
                     </div>
                   ) : a.severity !== "nominal" &&
                     a.severity !== "info" &&
+                    !a.key.startsWith("landing") &&
                     !a.key.startsWith("suddenShift_") &&
                     !a.key.startsWith("auto_advisory_") ? (
                     <button
