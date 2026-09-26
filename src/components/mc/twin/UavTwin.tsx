@@ -6,25 +6,13 @@ import { healthTone } from "../primitives";
 const MODEL_UID = "67703aedf76945ce872fc576be6a4321";
 
 const ANNOTATIONS = [
-  {
-    id: "propeller",
-    position: [-2.02, 0.11, -0.46],
-    eye: [-2.72, 3.86, -5.92],
-  },
-  { id: "motor", position: [0.66, 0.04, -0.09], eye: [-0.64, 4.25, -6.07] },
-  {
-    id: "hotSection",
-    position: [1.38, -0.17, -0.13],
-    eye: [0.93, 2.92, -6.64],
-  },
-  { id: "oilSystem", position: [0.93, 0.17, -0.16], eye: [0.85, 4.41, -5.92] },
-  { id: "fuelSystem", position: [-0.3, -0.37, 0.19], eye: [-1.43, -0.58, 7.2] },
-  {
-    id: "electrical",
-    position: [-1.22, -0.37, 0.11],
-    eye: [-1.86, -0.99, 7.15],
-  },
-  { id: "avionics", position: [2.58, 0.13, 0.2], eye: [2.51, 3.99, 6.13] },
+  { id: 2, position: [-2.02, 0.11, -0.46], eye: [-2.72, 3.86, -5.92] },
+  { id: 5, position: [0.66, 0.04, -0.09], eye: [-0.64, 4.25, -6.07] },
+  { id: 4, position: [1.38, -0.17, -0.13], eye: [0.93, 2.92, -6.64] },
+  { id: 6, position: [0.93, 0.17, -0.16], eye: [0.85, 4.41, -5.92] },
+  { id: 7, position: [-0.3, -0.37, 0.19], eye: [-1.43, -0.58, 7.2] },
+  { id: 8, position: [-1.22, -0.37, 0.11], eye: [-1.86, -0.99, 7.15] },
+  { id: 10, position: [2.58, 0.13, 0.2], eye: [2.51, 3.99, 6.13] },
 ];
 
 const TONE_HEX: Record<string, string> = {
@@ -42,44 +30,35 @@ declare global {
 function AirspaceBackground() {
   return (
     <div className="absolute inset-0 z-0 overflow-hidden bg-[#0a0e17]">
-      {/* Yellow Axis Ticks (Top) */}
+      {/* 2D Flat Graph Grid */}
       <div
+        className="absolute inset-0 opacity-20 pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px)
+          `,
+          backgroundSize: "100px 100px",
+          backgroundPosition: "0 0",
+        }}
+      />
+      {/* Yellow Axis Ticks (Top) */}
+      <div 
         className="absolute top-0 left-0 right-0 h-[12px] pointer-events-none z-0"
         style={{
-          backgroundImage:
-            "repeating-linear-gradient(90deg, transparent, transparent 99px, rgba(234, 179, 8, 0.4) 99px, rgba(234, 179, 8, 0.4) 100px)",
-          borderBottom: "1px solid rgba(234, 179, 8, 0.2)",
+          backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 99px, rgba(234, 179, 8, 0.5) 99px, rgba(234, 179, 8, 0.5) 100px)",
+          borderBottom: "1px solid rgba(234, 179, 8, 0.3)"
         }}
       />
       {/* Yellow Axis Ticks (Left) */}
-      <div
+      <div 
         className="absolute top-0 left-0 bottom-0 w-[12px] pointer-events-none z-0"
         style={{
-          backgroundImage:
-            "repeating-linear-gradient(180deg, transparent, transparent 99px, rgba(234, 179, 8, 0.4) 99px, rgba(234, 179, 8, 0.4) 100px)",
-          borderRight: "1px solid rgba(234, 179, 8, 0.2)",
+          backgroundImage: "repeating-linear-gradient(180deg, transparent, transparent 99px, rgba(234, 179, 8, 0.5) 99px, rgba(234, 179, 8, 0.5) 100px)",
+          borderRight: "1px solid rgba(234, 179, 8, 0.3)"
         }}
       />
-
-      {/* 3D Perspective Grid Floor */}
-      <div
-        className="absolute bottom-[0] left-[-50%] w-[200%] h-[150%] opacity-50 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px)
-          `,
-          backgroundSize: "60px 60px",
-          backgroundPosition: "center center",
-          transform: "perspective(800px) rotateX(75deg)",
-          transformOrigin: "bottom center",
-          maskImage:
-            "linear-gradient(to top, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 80%)",
-          WebkitMaskImage:
-            "linear-gradient(to top, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 80%)",
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-[#0a0e17]/60 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-[#0a0e17]/30 to-transparent pointer-events-none" />
     </div>
   );
 }
@@ -130,7 +109,7 @@ export function UavTwin() {
       ui_controls: 1, // Crucial: Re-enable free 3D orbiting for the user!
       ui_infos: 0,
       ui_watermark: 0,
-      ui_annotations: 0,
+      ui_annotations: 1,
       autostart: 1,
       preload: 1,
       camera: 0,
@@ -179,36 +158,33 @@ export function UavTwin() {
       }
     };
 
-    const getCoords = (pos: number[]) => {
-      return new Promise<{ x: number; y: number }>((resolve) => {
-        if (!apiRef.current?.getWorldToScreenCoordinates) {
-          return resolve({ x: 0, y: 0 });
-        }
-        apiRef.current.getWorldToScreenCoordinates(pos, (result: any) => {
-          if (result && result.canvasCoord) {
-            resolve({ x: result.canvasCoord[0], y: result.canvasCoord[1] });
-          } else {
-            resolve({ x: 0, y: 0 });
-          }
+    // Update native Sketchfab annotations based on REDUX state
+    trackTimer = window.setInterval(() => {
+      const api = apiRef.current;
+      const state = stateRef.current;
+      if (!api || !state || !state.health) return;
+
+      ANNOTATIONS.forEach(({ id }) => {
+        // Find which subsystem this matches (heuristic mapping for native IDs)
+        let subsystemKey = "engine";
+        let title = "Component";
+        if (id === 2) { subsystemKey = "vibration"; title = "Propeller & Hub"; }
+        if (id === 5) { subsystemKey = "propulsion"; title = "Electric Motor"; }
+        if (id === 4) { subsystemKey = "engine"; title = "Hot Section / Exhaust"; }
+        if (id === 6) { subsystemKey = "lubrication"; title = "Oil Pump & Gallery"; }
+        if (id === 7) { subsystemKey = "fuel"; title = "Fuel Pump & Lines"; }
+        if (id === 8) { subsystemKey = "electrical"; title = "Generator & Bus"; }
+        if (id === 10) { subsystemKey = "nav"; title = "Nav / GNSS Bay"; }
+
+        const val = state.health.subsystems[subsystemKey] ?? 100;
+        const tone = healthTone(val).toUpperCase();
+        
+        api.updateAnnotation(id, {
+          title: title,
+          content: `Health: ${val.toFixed(0)}% [${tone}]`
         });
       });
-    };
-
-    trackTimer = window.setInterval(async () => {
-      if (!apiRef.current) return;
-      for (const { id, position } of ANNOTATIONS) {
-        const coords = await getCoords(position);
-        const el = document.getElementById(`marker-${id}`);
-        if (el && coords.x > 0 && coords.y > 0) {
-          const x = coords.x / (window.devicePixelRatio || 1);
-          const y = coords.y / (window.devicePixelRatio || 1);
-          el.style.left = `${x}px`;
-          el.style.top = `${y}px`;
-          el.style.bottom = "auto";
-          el.style.opacity = "1";
-        }
-      }
-    }, 40);
+    }, 500);
 
     timer = requestAnimationFrame(tick);
 
@@ -256,60 +232,6 @@ export function UavTwin() {
         </div>
       </div>
 
-      {/* Custom 3D Tracking Markers */}
-      {ready &&
-        ANNOTATIONS.map(({ id }) => {
-          const info = HOTSPOTS[id];
-          const subsystem = info?.subsystem;
-          const val =
-            subsystem && health ? (health.subsystems[subsystem] ?? 100) : 100;
-          const tone = healthTone(val);
-          const color = TONE_HEX[tone] || TONE_HEX.nominal;
-          const isActive = focusHotspot === id;
-
-          return (
-            <div
-              key={id}
-              id={`marker-${id}`}
-              className="absolute pointer-events-auto cursor-pointer group flex flex-col items-center justify-center z-20"
-              style={{
-                transform: "translate(-50%, -50%)",
-                transition: "left 0.1s, top 0.1s, opacity 0.2s ease-in-out",
-              }}
-              onMouseEnter={() => setFocusHotspot(id)}
-              onMouseLeave={() => setFocusHotspot(null)}
-              onClick={() => {
-                if (apiRef.current) {
-                  const pos = ANNOTATIONS.find((a) => a.id === id)?.position;
-                  const eye = ANNOTATIONS.find((a) => a.id === id)?.eye;
-                  if (pos && eye) apiRef.current.setCameraLookAt(eye, pos, 1);
-                }
-              }}
-            >
-              {/* Outer Glow Ring */}
-              <div
-                className="absolute inset-[-4px] rounded-full animate-ping opacity-60"
-                style={{ backgroundColor: color }}
-              />
-              {/* Inner Dot */}
-              <div
-                className="w-4 h-4 rounded-full border border-white/50 shadow-[0_0_10px_rgba(0,0,0,0.8)] relative z-10 transition-colors"
-                style={{
-                  backgroundColor: color,
-                  boxShadow: `0 0 10px ${color}`,
-                }}
-              />
-              {/* Hover Label */}
-              <div
-                className={`absolute top-5 px-2 py-0.5 rounded-sm bg-black/80 border text-[10px] font-mono whitespace-nowrap transition-opacity pointer-events-none ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-                style={{ borderColor: color, color: color }}
-              >
-                {info?.label ?? id}{" "}
-                <span className="text-white/70">[{val.toFixed(0)}]</span>
-              </div>
-            </div>
-          );
-        })}
-    </div>
+      </div>
   );
 }
