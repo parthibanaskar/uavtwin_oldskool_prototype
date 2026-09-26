@@ -59,6 +59,8 @@ export class SimulatedTelemetrySource implements TelemetrySource {
   private speedMultiplier = 1;
   private fatigueCrackMeters = 0.001; // Initial flaw size of 1mm
   private faultHistory = new Set<string>();
+  private simulatedRulSeconds = 3.5 * 3600; // 3.5 hours base
+  private hadFaults = false;
 
   constructor(options: SimulatorOptions = {}) {
     this.intervalMs = options.intervalMs ?? 750;
@@ -116,6 +118,8 @@ export class SimulatedTelemetrySource implements TelemetrySource {
     this.faults.clear();
     this.gpsBias = { lat: 0, lon: 0 };
     this.faultHistory.clear();
+    this.simulatedRulSeconds = 3.5 * 3600;
+    this.hadFaults = false;
     this.t = 0;
     this.fatigueCrackMeters = 0.001;
     this.history = [];
@@ -272,21 +276,34 @@ export class SimulatedTelemetrySource implements TelemetrySource {
       stress_MPa,
       cycles_this_tick,
     );
-    let rul_seconds = estimateRUL(
-      this.fatigueCrackMeters,
-      stress_MPa,
-      params.rpm,
-    );
-    // Artificially crush RUL instantly if a critical fault is injected and let it tick down to 0
+    // Base usage decay
+    this.simulatedRulSeconds -= dt;
+
     if (this.faults.size > 0 && !this.isDiverting) {
+      this.hadFaults = true;
       let maxAge = 0;
       for (const k of Array.from(this.faults.keys())) {
         const a = this.faults.get(k) || 0;
         if (a > maxAge) maxAge = a;
       }
-      rul_seconds = 65 - maxAge * 3;
-      if (rul_seconds < 0) rul_seconds = 0;
+
+      // If newly faulted, drop to ~70 mins
+      if (this.simulatedRulSeconds > 70 * 60) {
+        this.simulatedRulSeconds = 70 * 60;
+      }
+
+      // Exponential decrease based on fault age (drops faster the longer the fault exists)
+      this.simulatedRulSeconds -= dt * Math.min(200, Math.exp(maxAge / 30));
+    } else if (this.hadFaults) {
+      // Faults were fixed. Recover slightly to ~75-80 mins, but no more.
+      if (this.simulatedRulSeconds < 78 * 60) {
+        this.simulatedRulSeconds += dt * 50; // fast recovery to 78 mins
+        if (this.simulatedRulSeconds > 78 * 60) this.simulatedRulSeconds = 78 * 60;
+      }
     }
+
+    if (this.simulatedRulSeconds < 0) this.simulatedRulSeconds = 0;
+    let rul_seconds = this.simulatedRulSeconds;
 
     // Anti-spoofing check
     const spoofCheck = checkGPSconsistency(

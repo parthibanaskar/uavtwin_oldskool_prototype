@@ -1104,6 +1104,35 @@ export function evaluateAlerts(d: Derived): AlertCandidate[] {
       });
     }
 
+    const rulMargin = phys.rul_seconds - phys.mission_time_seconds;
+    if (
+      d.sample.activeFaults.length === 0 &&
+      !phys.crashed &&
+      !phys.landed &&
+      phys.rul_seconds < 10000 // RUL has been compromised by a previous fault
+    ) {
+      if (rulMargin > 0 && rulMargin < 20 * 60) {
+        push({
+          key: "prescriptiveDivert",
+          subsystem: "engine",
+          title: "RUL MARGIN CRITICAL: DIVERT ADVISED",
+          severity: "warning",
+          confidence: 1.0,
+          hotspot: "engine",
+          contributions: [
+            contribution(
+              "rpm",
+              "RUL Margin",
+              100,
+              `${(rulMargin / 60).toFixed(1)} mins`
+            ),
+          ],
+          narrative: `CRITICAL ADVISORY: Fault fixed, but Remaining Useful Life is dangerously close to remaining mission time. \n\n? Threat: A safety margin of +20 mins is required. Current margin is only ${(rulMargin / 60).toFixed(1)} mins.\n? Action: Proceed with extreme caution or divert immediately to the nearest safe landing site.`,
+          resolutionNarrative: `ACTION EXECUTED: Emergency Divert Initiated.\n\n? Mitigation: Flight computer plotting new trajectory to Safdarjung Airport (VDSJ).\n? Outcome: Aircraft is proceeding to safe landing site to ensure vehicle recovery.`,
+        });
+      }
+    }
+
     // PROCEDURAL NARRATIVE GENERATOR
     const t = d.sample.t;
     if (!phys.crashed && phys.rul_seconds > 60) {
